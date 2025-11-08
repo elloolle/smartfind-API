@@ -36,8 +36,12 @@ AUTH_USER_MODEL = "authentication.User"
 
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',  # Specify the PostgreSQL backend
+        'NAME': 'smartfind_db',  # Name of your PostgreSQL database
+        'USER': 'admin',  # Username for connecting to the database
+        'PASSWORD': 'admin',  # Password for the database user
+        'HOST': 'localhost',  # Or the IP address/hostname of your PostgreSQL server
+        'PORT': '5432',
     }
 }
