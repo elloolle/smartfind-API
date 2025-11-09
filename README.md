@@ -1,2 +1,4 @@
-```pip install -r requirements.txt```
-```python manage.py runserver``` 
+```bash
+pip install -r requirements.txt
+python manage.py runserver
+```
