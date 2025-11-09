@@ -9,24 +9,20 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework import mixins, viewsets
 from ..serializers import UserSerializer
-
 User = get_user_model()
 
 
-# Регистрация
 class UserView(mixins.CreateModelMixin, viewsets.GenericViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
 
-# Логин
 class AccessTokenView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         token_data = serializer.validated_data
         return Response({"token": token_data["access"]})
-# Логаут
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
