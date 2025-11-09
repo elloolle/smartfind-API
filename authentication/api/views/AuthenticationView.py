@@ -5,38 +5,30 @@ from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework import mixins, viewsets
 from ..serializers import UserSerializer
 
 User = get_user_model()
 
 
 # Регистрация
-class UserView(viewsets.ModelViewSet):
+class UserView(mixins.CreateModelMixin, viewsets.GenericViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
 
 # Логин
-class CustomLoginView(ObtainAuthToken):
-    authentication_classes = []
+class AccessTokenView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
-        serializer = self.serializer_class(
-            data=request.data, context={"request": request}
-        )
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data["user"]
-        token, _ = Token.objects.get_or_create(user=user)
-        return Response({"token": token.key})
-
-
+        token_data = serializer.validated_data
+        return Response({"token": token_data["access"]})
 # Логаут
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        try:
-            request.user.auth_token.delete()
-        except:
-            pass
         return Response({"detail": "Successfully logged out."})

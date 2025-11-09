@@ -1,5 +1,4 @@
 from .underSettings.customizable_settings import *
-SECRET_KEY = "django-insecure-svr-u2ps=pu^j_d5cq75+%7g$=7aj59_)@g1%^u=!64ni9@01^"
 
 ROOT_URLCONF = "smartfindAPI.urls"
 
