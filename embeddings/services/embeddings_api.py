@@ -23,7 +23,11 @@ def get_gemini_embeddings(texts, api_key, model):
 EMBEDDING_MODELS = {
     "openai": {
         "method": get_openai_embeddings,
-        "models": ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"],
+        "models": [
+            "text-embedding-3-small",
+            "text-embedding-3-large",
+            "text-embedding-ada-002",
+        ],
     },
     "google": {"method": get_gemini_embeddings, "models": ["gemini-embedding-001"]},
 }
@@ -35,4 +39,3 @@ def get_embeddings_from_model(texts, api_key, source, model):
 
 def get_models():
     return {key: value["models"] for key, value in EMBEDDING_MODELS.items()}
-

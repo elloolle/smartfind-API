@@ -20,4 +20,3 @@ class GetEmbeddingsView(APIView):
     def get(self, request):
         response = get_models()
         return Response(response)
-

@@ -16,15 +16,27 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="StripeCustomer",
             fields=[
-                ("id", models.CharField(max_length=256, primary_key=True, serialize=False)),
+                (
+                    "id",
+                    models.CharField(max_length=256, primary_key=True, serialize=False),
+                ),
                 ("date_created", models.DateTimeField(auto_now=True)),
-                ("user", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
             name="StripeSubscription",
             fields=[
-                ("id", models.CharField(max_length=256, primary_key=True, serialize=False)),
+                (
+                    "id",
+                    models.CharField(max_length=256, primary_key=True, serialize=False),
+                ),
                 ("session_id", models.CharField(max_length=256, null=True)),
                 ("status", models.CharField(default="init", max_length=64)),
                 ("type", models.CharField(max_length=64)),
@@ -33,14 +45,20 @@ class Migration(migrations.Migration):
                 ("data", models.JSONField(null=True)),
                 (
                     "customer",
-                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="payments.stripecustomer"),
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="payments.stripecustomer",
+                    ),
                 ),
             ],
         ),
         migrations.CreateModel(
             name="StripePayment",
             fields=[
-                ("id", models.CharField(max_length=256, primary_key=True, serialize=False)),
+                (
+                    "id",
+                    models.CharField(max_length=256, primary_key=True, serialize=False),
+                ),
                 ("session_id", models.CharField(max_length=256, null=True)),
                 ("type", models.CharField(max_length=64)),
                 ("status", models.CharField(default="init", max_length=64)),
@@ -48,15 +66,26 @@ class Migration(migrations.Migration):
                 ("data", models.JSONField(null=True)),
                 (
                     "customer",
-                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="payments.stripecustomer"),
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="payments.stripecustomer",
+                    ),
                 ),
                 (
                     "subscription",
                     models.ForeignKey(
-                        null=True, on_delete=django.db.models.deletion.SET_NULL, to="payments.stripesubscription"
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="payments.stripesubscription",
                     ),
                 ),
-                ("user", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
     ]

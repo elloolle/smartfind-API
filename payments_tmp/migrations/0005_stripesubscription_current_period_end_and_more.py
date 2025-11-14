@@ -13,13 +13,17 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="stripesubscription",
             name="current_period_end",
-            field=models.DateTimeField(default=datetime.datetime(2025, 5, 20, 14, 23, 18, 766115)),
+            field=models.DateTimeField(
+                default=datetime.datetime(2025, 5, 20, 14, 23, 18, 766115)
+            ),
             preserve_default=False,
         ),
         migrations.AddField(
             model_name="stripesubscription",
             name="current_period_start",
-            field=models.DateTimeField(default=datetime.datetime(2025, 5, 20, 14, 23, 41, 906468)),
+            field=models.DateTimeField(
+                default=datetime.datetime(2025, 5, 20, 14, 23, 41, 906468)
+            ),
             preserve_default=False,
         ),
     ]

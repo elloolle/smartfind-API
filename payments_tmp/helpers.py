@@ -2,7 +2,6 @@ import stripe
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Q
-from loguru import logger
 
 from bitapi.payments.models import StripeSubscription
 from bitapi.users.models import User
@@ -10,9 +9,14 @@ from config.configuration import FRONT_URL
 
 User = get_user_model()
 
+
 def get_user_sub_db(user: User) -> StripeSubscription | None:
     # Get last not canceled subscription
-    return StripeSubscription.objects.filter(~Q(status="canceled"), user=user).order_by("date_created").last()
+    return (
+        StripeSubscription.objects.filter(~Q(status="canceled"), user=user)
+        .order_by("date_created")
+        .last()
+    )
 
 
 def get_current_sub(user: User) -> stripe.Subscription | None:
@@ -53,8 +57,7 @@ def grant_credits(user: User):
 
             customer = stripe.Customer.retrieve(user.customer_id)
             stripe.Customer.modify(
-                user.customer_id,
-                balance=customer["balance"] - grant_credits_cents
+                user.customer_id, balance=customer["balance"] - grant_credits_cents
             )
     except Exception:
         logger.exception("Error granting credits {}", user.username)

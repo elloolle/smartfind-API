@@ -30,9 +30,7 @@ class AutoPayService:
             confirm=True,
             off_session=True,
             currency="usd",
-            metadata={
-                "type": "auto_pay"
-            }
+            metadata={"type": "auto_pay"},
         )
         status = payment["status"]
         if status == "requires_payment_method":
@@ -51,7 +49,10 @@ class AutoPayService:
         logger.info("Adding {} words to user {}", amount, user.id)
         user.additional_limits = {
             **(user.additional_limits or {}),
-            "granted_words_simple_scan": user.additional_limits.get("granted_words_simple_scan", 0) + amount
+            "granted_words_simple_scan": user.additional_limits.get(
+                "granted_words_simple_scan", 0
+            )
+            + amount,
         }
         user.save(update_fields=["additional_limits"])
 
@@ -65,7 +66,9 @@ class AutoPayService:
             subscription.auto_pay["error"] = str(e)
             subscription.save(update_fields=["auto_pay"])
             logger.warning("AutoPay failed for subscription {}", subscription.id)
-            send_telegram_notification(f"AutoPay failed user: {user.id} {user.username}")
+            send_telegram_notification(
+                f"AutoPay failed user: {user.id} {user.username}"
+            )
             return False
 
         logger.info("AutoPay succeeded for subscription {}", subscription.id)
@@ -98,5 +101,7 @@ class AutoPayService:
         if remaining < limit:
             return cls.execute_auto_pay(user, subscription)
         else:
-            logger.debug("AutoPay not needed, remaining: {}, limit: {}", remaining, limit)
+            logger.debug(
+                "AutoPay not needed, remaining: {}, limit: {}", remaining, limit
+            )
             return False
