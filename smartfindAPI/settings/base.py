@@ -92,4 +92,6 @@ SIMPLE_JWT = {
 }
 
 PAYMENT_USES_SSL = False
-PAYMENT_HOST = "localhost:8000"
+PAYMENT_HOST = "127.0.0.1:8000"
+PAYMENT_PROTOCOL = "http"
+PAYMENT_MODEL = "subscription_payments.Payment"
