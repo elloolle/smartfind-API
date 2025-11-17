@@ -8,7 +8,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ("payments", "0001_initial"),
+        ("subscription_payments", "0001_initial"),
     ]
 
     operations = [

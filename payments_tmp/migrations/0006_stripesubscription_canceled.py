@@ -5,7 +5,10 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("payments", "0005_stripesubscription_current_period_end_and_more"),
+        (
+            "subscription_payments",
+            "0005_stripesubscription_current_period_end_and_more",
+        ),
     ]
 
     operations = [

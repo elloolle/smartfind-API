@@ -28,6 +28,7 @@ urlpatterns = [
             [
                 path("", include("authentication.urls")),
                 path("", include("embeddings.urls")),
+                path("payments/", include("payments.urls")),
             ]
         ),
     ),
