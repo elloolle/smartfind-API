@@ -40,4 +40,4 @@ class Subscription(models.Model):
     status = models.CharField(choices=SubscriptionStatus.choices())
     month_price = models.FloatField()
     start_period = models.DateTimeField()
-    delay = models.DateTimeField()
+    delay = models.DurationField()

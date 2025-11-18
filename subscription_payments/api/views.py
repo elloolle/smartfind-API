@@ -9,7 +9,7 @@ from subscription_payments.models import Payment, PaymentStatus
 from .serializers import PaymentSerializer
 from loguru import logger
 from django.contrib.auth import get_user_model
-from ..service import get_event
+from ..service import get_event, give_product_to_user
 
 load_dotenv()
 stripe.api_key = os.getenv("TEST_STRIPE_API_KEY")
@@ -99,13 +99,24 @@ class PaymentView(APIView):
 
 
 class WebhookView(APIView):
+    @classmethod
+    def get_user_by_customer(cls, customer_id: str):
+        try:
+            return User.objects.get(customer_id=customer_id)
+        except User.DoesNotExist:
+            logger.error("Unknown customer_id: {}", customer_id)
+            raise
+
     def post(self, request):
         event = get_event(request)
         data = event["data"]["object"]
         event_type = event["type"]
         user = None
         logger.debug(event_type)
-        # if event_type == "checkout.session.completed":
-        #     product_name = data["metadata"].get("type")
-        #     give_product_to_user(user, product_name)
+        if isinstance(data.get("customer"), str):
+            user = self.get_user_by_customer(data["customer"])
+
+        if event_type == "checkout.session.completed":
+            product_name = data["metadata"].get("type")
+            give_product_to_user(user, product_name)
         return Response({"status": "success"})

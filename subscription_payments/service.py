@@ -5,8 +5,13 @@ from typing import TypedDict
 
 from dotenv import load_dotenv
 import stripe
+from psycopg2 import DATETIME
+
 from .models import Subscription, SubscriptionStatus
 from django.conf import settings
+from loguru import logger
+from datetime import timedelta
+from .helpers import now
 
 load_dotenv()
 stripe.api_key = os.getenv("TEST_STRIPE_API_KEY")
@@ -27,11 +32,12 @@ def get_event(request):
 
 
 def give_product_to_user(user, product_name):
+    logger.error(product_name)
     if product_name == "pro_month_subscription":
-        delay = "month"
         Subscription.objects.create(
             user=user,
             status=SubscriptionStatus.active,
             month_price=settings.SUBSCRIPTION_MONTH_PRICE["pro_month"],
-            delay=delay,
+            start_period=now(),
+            delay=timedelta(days=30),
         )
