@@ -9,6 +9,7 @@ from subscription_payments.models import Payment, PaymentStatus
 from .serializers import PaymentSerializer
 from loguru import logger
 from django.contrib.auth import get_user_model
+from ..service import get_event
 
 load_dotenv()
 stripe.api_key = os.getenv("TEST_STRIPE_API_KEY")
@@ -99,4 +100,12 @@ class PaymentView(APIView):
 
 class WebhookView(APIView):
     def post(self, request):
-        pass
+        event = get_event(request)
+        data = event["data"]["object"]
+        event_type = event["type"]
+        user = None
+        logger.debug(event_type)
+        # if event_type == "checkout.session.completed":
+        #     product_name = data["metadata"].get("type")
+        #     give_product_to_user(user, product_name)
+        return Response({"status": "success"})

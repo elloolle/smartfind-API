@@ -1,7 +1,5 @@
 ROOT_URLCONF = "smartfindAPI.urls"
 
-ALLOWED_HOSTS = []
-
 
 TEMPLATES = [
     {
