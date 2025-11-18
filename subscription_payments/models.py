@@ -1,27 +1,29 @@
-from decimal import Decimal
+from django.db import models
+from django.contrib.auth import get_user_model
+from .utils import now
 
-from payments import PurchasedItem
-from payments.models import BasePayment
+User = get_user_model()
+from enum import Enum
 
 
-class Payment(BasePayment):
+class PaymentStatus(Enum):
+    init = "init"
+    pending = "pending"
 
-    def get_failure_url(self) -> str:
-        # Return a URL where users are redirected after
-        # they fail to complete a payment:
-        return f"http://example.com/payments/{self.pk}/failure"
+    @classmethod
+    def choices(cls):
+        return [(member, member) for member in cls]
 
-    def get_success_url(self) -> str:
-        # Return a URL where users are redirected after
-        # they successfully complete a payment:
-        return f"http://example.com/payments/{self.pk}/success"
 
-    def get_purchased_items(self):
-        # Return items that will be included in this payment.
-        yield PurchasedItem(
-            name="The Hound of the Baskervilles",
-            sku="BSKV",
-            quantity=9,
-            price=Decimal(10),
-            currency="USD",
-        )
+payment_statuses = ["init", "pending"]
+
+
+class Payment(models.Model):
+    id = models.CharField(max_length=256, primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    type = models.CharField(max_length=64)
+    status = models.CharField(
+        default=PaymentStatus.init, choices=PaymentStatus.choices()
+    )
+
+    date_created = models.DateTimeField(auto_now_add=True, db_index=True)

@@ -4,14 +4,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
-
+from rest_framework.generics import CreateAPIView
 from ..serializers import UserSerializer
 
 
 User = get_user_model()
 
 
-class UserView(mixins.CreateModelMixin, viewsets.GenericViewSet):
+class UserView(CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 

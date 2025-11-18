@@ -16,10 +16,7 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path
 from django.urls import include, path
-
-from subscription_payments.views import TestView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -29,7 +26,6 @@ urlpatterns = [
             [
                 path("", include("authentication.urls")),
                 path("", include("embeddings.urls")),
-                path("payments/", include("payments.urls")),
                 path("payments/", include("subscription_payments.urls")),
             ]
         ),
