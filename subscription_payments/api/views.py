@@ -5,12 +5,17 @@ from rest_framework import viewsets, mixins
 from dotenv import load_dotenv
 import os
 import stripe
-from subscription_payments.models import Payment, PaymentStatus
+from subscription_payments.models import Payment, PaymentStatus, Subscription
 from .serializers import PaymentSerializer
 from loguru import logger
 from django.contrib.auth import get_user_model
-from ..service import get_event, give_product_to_user
+from django.conf import settings
+from ..service import get_event, update_user_subscription, get_last_user_subscription
+from ..helpers import get_subscription_plan_from_product_name
+from rest_framework import status
 
+logger.add(lambda msg: print(msg, end=""))
+logger.add(r"C:\Users\Leo\Desktop\Прога\SmartFind проект\smartfind-API\logs.txt")
 load_dotenv()
 stripe.api_key = os.getenv("TEST_STRIPE_API_KEY")
 
@@ -18,15 +23,34 @@ success_url = "http://127.0.0.1:8000"
 User = get_user_model()
 
 
-class TestView(APIView):
-    # permission_classes = [IsAuthenticated]
+class WebhookView(APIView):
+    @classmethod
+    def get_user_by_customer(cls, customer_id: str):
+        try:
+            return User.objects.get(customer_id=customer_id)
+        except User.DoesNotExist:
+            logger.error("Unknown customer_id: {}", customer_id)
+            raise
 
     def post(self, request):
+        event = get_event(request)
+        data = event["data"]["object"]
+        event_type = event["type"]
+        user = None
+        if isinstance(data.get("customer"), str):
+            user = self.get_user_by_customer(data["customer"])
+        if event_type.startswith("customer.subscription."):
+            product_name = data["items"]["data"][0]["price"]["lookup_key"]
+            update_user_subscription(
+                id=data["id"],
+                user=user,
+                subscription_status=data["status"],
+                product_name=product_name,
+            )
         return Response({"status": "success"})
-        # return Response(createPortal(request))
 
 
-class PaymentView(APIView):
+class SubscriptionView(APIView):
     def get_customer(self) -> str:
         if self.request.user.customer_id:
             return self.request.user.customer_id
@@ -68,55 +92,76 @@ class PaymentView(APIView):
         )
         return prices.data[0].id
 
-    def create_new_subscription(self, price_name) -> stripe.checkout.Session:
+    def create_new_subscription(
+        self, price_name, trial_period_days
+    ) -> stripe.checkout.Session:
         meta = {"type": price_name}
+        if trial_period_days == 0:
+            trial_period_days = None
         return self.create_session(
             "subscription",
             self.get_price(price_name),
             metadata=meta,
             url_param="subscription",
+            subscription_data={"trial_period_days": trial_period_days},
         )
 
-    def get(self, request):
-        customer_id = self.get_customer()
-        portal_session = stripe.billing_portal.Session.create(
-            customer=customer_id,
-            return_url=success_url,
-        )
-        return Response(portal_session)
-
-    def post(self, request):
-        type = request.data.get("type")
+    def create_payment_link(self, product_name, trial_period_days=0):
         self.get_customer()
-        payment_session = self.create_new_subscription(type)
+        payment_session = self.create_new_subscription(product_name, trial_period_days)
         Payment.objects.create(
             id=payment_session.id,
-            user=request.user,
+            user=self.request.user,
             type=type,
             status=PaymentStatus.pending,
         )
         return Response(payment_session.url)
 
-
-class WebhookView(APIView):
-    @classmethod
-    def get_user_by_customer(cls, customer_id: str):
-        try:
-            return User.objects.get(customer_id=customer_id)
-        except User.DoesNotExist:
-            logger.error("Unknown customer_id: {}", customer_id)
-            raise
-
     def post(self, request):
-        event = get_event(request)
-        data = event["data"]["object"]
-        event_type = event["type"]
-        user = None
-        logger.debug(event_type)
-        if isinstance(data.get("customer"), str):
-            user = self.get_user_by_customer(data["customer"])
+        subscription = get_last_user_subscription(request.user)
+        product_name = request.data.get("product_name")
+        if (
+            subscription
+            and get_subscription_plan_from_product_name(product_name)
+            == subscription.plan
+        ):
+            return Response(
+                {"error": "user already subscribed for this plan"},
+                status=status.HTTP_405_METHOD_NOT_ALLOWED,
+            )
+        return self.create_payment_link(product_name)
 
-        if event_type == "checkout.session.completed":
-            product_name = data["metadata"].get("type")
-            give_product_to_user(user, product_name)
+    def delete(self, request):
+        user = request.user
+        subscription = get_last_user_subscription(user)
+
+        if not subscription:
+            return Response({"error": "user aren't subscribed"})
+
+        metadata = {
+            "collection_method": "send_invoice",
+            "days_until_due": settings.DAYS_BEFORE_SUBSCRIPTION_DEACTIVATION,
+        }
+        stripe.Subscription.modify(subscription.id, metadata=metadata)
         return Response({"status": "success"})
+
+
+class TrialSubscriptionView(SubscriptionView):
+    def post(self, request):
+        if not request.user.may_have_trial:
+            return Response({"status": "user does not have trial permissions"})
+        return self.create_payment_link(
+            request, trial_period_days=settings.TRIAL_PERIOD_DAYS
+        )
+
+
+class CustomerPortalView(APIView):
+    def get(self, request):
+        customer_id = request.user.customer_id
+        if not customer_id:
+            return Response({"status": "user does not buy subscriptions"})
+        portal_session = stripe.billing_portal.Session.create(
+            customer=customer_id,
+            return_url=success_url,
+        )
+        return Response(portal_session)

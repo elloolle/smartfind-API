@@ -1,7 +1,11 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
-from .api.views.authentication_view import AccessTokenView, LogoutView, UserSignUpView
+from authentication.api.authentication_view import (
+    AccessTokenView,
+    LogoutView,
+    UserSignUpView,
+)
 
 urlpatterns = [
     path("signup/", UserSignUpView.as_view(), name="signup"),
