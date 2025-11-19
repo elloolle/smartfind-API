@@ -278,3 +278,4 @@
 2025-11-20 00:42:15.215 | INFO     | subscription_payments.service:get_last_user_subscription:55 - subscriptions: <QuerySet [<Subscription: Subscription object (fe8845cf-4788-44e1-a5ed-6cf8120db3e9)>]>
 2025-11-20 00:42:34.049 | INFO     | subscription_payments.service:get_last_user_subscription:57 - subscriptions: <QuerySet [<Subscription: Subscription object (cc808c3c-946e-4950-929d-bf39b745a4b2)>]>
 2025-11-20 00:43:22.182 | INFO     | subscription_payments.service:get_last_user_subscription:57 - subscriptions: <QuerySet [<Subscription: Subscription object (d481e99f-fe14-4ac4-9b42-9005baee1465)>]>
+2025-11-20 01:24:01.753 | INFO     | subscription_payments.api.views:get_price:90 - get_price: <rest_framework.request.Request: POST '/api/payments/set_trial/'>

@@ -87,6 +87,7 @@ class SubscriptionView(APIView):
 
     @classmethod
     def get_price(cls, key: str) -> str:
+        logger.info(f"get_price: {key}")
         prices = stripe.Price.list(
             lookup_keys=[key],
         )
@@ -136,7 +137,10 @@ class SubscriptionView(APIView):
         subscription = get_last_user_subscription(user)
 
         if not subscription:
-            return Response({"error": "user aren't subscribed"})
+            return Response(
+                {"error": "user aren't subscribed"},
+                status=status.HTTP_405_METHOD_NOT_ALLOWED,
+            )
 
         metadata = {
             "collection_method": "send_invoice",
@@ -148,8 +152,12 @@ class SubscriptionView(APIView):
 
 class TrialSubscriptionView(SubscriptionView):
     def post(self, request):
-        if not request.user.may_have_trial:
-            return Response({"status": "user does not have trial permissions"})
+        # if not request.user.may_have_trial:
+        #     return Response({"status": "user does not have trial permissions"})
+        user = request.user
+        user.may_have_trial = False
+        user.save()
+        # TODO добавить в request тип подписки
         return self.create_payment_link(
             request, trial_period_days=settings.TRIAL_PERIOD_DAYS
         )
@@ -159,9 +167,12 @@ class CustomerPortalView(APIView):
     def get(self, request):
         customer_id = request.user.customer_id
         if not customer_id:
-            return Response({"status": "user does not buy subscriptions"})
+            return Response(
+                {"error": "user does not buy subscriptions"},
+                status=status.HTTP_405_METHOD_NOT_ALLOWED,
+            )
         portal_session = stripe.billing_portal.Session.create(
             customer=customer_id,
             return_url=success_url,
         )
-        return Response(portal_session)
+        return Response({"portal_session_link": portal_session.url})
