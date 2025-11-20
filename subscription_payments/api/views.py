@@ -14,12 +14,13 @@ from ..service import get_event, update_user_subscription, get_last_user_subscri
 from ..helpers import get_subscription_plan_from_product_name
 from rest_framework import status
 
-logger.add(lambda msg: print(msg, end=""))
-logger.add(r"C:\Users\Leo\Desktop\Прога\SmartFind проект\smartfind-API\logs.txt")
+# logger.add(lambda msg: print(msg, end=""))
+logger.add(settings.LOGS_PATH)
 load_dotenv()
 stripe.api_key = os.getenv("TEST_STRIPE_API_KEY")
 
-success_url = "http://127.0.0.1:8000"
+success_url = settings.SUCCESS_URL
+
 User = get_user_model()
 
 
@@ -87,7 +88,6 @@ class SubscriptionView(APIView):
 
     @classmethod
     def get_price(cls, key: str) -> str:
-        logger.info(f"get_price: {key}")
         prices = stripe.Price.list(
             lookup_keys=[key],
         )
@@ -153,13 +153,16 @@ class SubscriptionView(APIView):
 class TrialSubscriptionView(SubscriptionView):
     def post(self, request):
         if not request.user.may_have_trial:
-            return Response({"status": "user does not have trial permissions"})
+            return Response(
+                {"error": "user does not have trial permissions"},
+                status=status.HTTP_405_METHOD_NOT_ALLOWED,
+            )
         user = request.user
         user.may_have_trial = False
         user.save()
-        # TODO добавить в request тип подписки
         return self.create_payment_link(
-            request, trial_period_days=settings.TRIAL_PERIOD_DAYS
+            product_name=settings.DEFAULT_TRIAL_PLAN,
+            trial_period_days=settings.TRIAL_PERIOD_DAYS,
         )
 
 

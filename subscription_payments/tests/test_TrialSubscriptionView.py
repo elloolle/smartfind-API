@@ -37,12 +37,11 @@ class TrialSubscriptionViewTests(APITestCase):
         self,
         mock_create_payment_link,
     ):
-        self.user.may_have_trial = True
         result = {"checkout_url": "https://stripe.test/trial"}
         mock_create_payment_link.return_value = Response(result)
 
         response = self.client.post(self.url, {})
-
+        self.user.refresh_from_db()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, result)
         self.assertFalse(self.user.may_have_trial)
@@ -57,7 +56,4 @@ class TrialSubscriptionViewTests(APITestCase):
 
         response = self.client.post(self.url, {})
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            response.data, {"status": "user does not have trial permissions"}
-        )
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
