@@ -14,7 +14,7 @@ python manage.py test
 stripe listen --forward-to localhost:8000/api/payments/webhook/  # активация stripe cli     
 stripe trigger checkout.session.completed # отправка запроса на вебхук 
 ```
-## Прокинуть вебхуки на ngrok
+## Прокинуть вебхуки
 ```bash
 ngrok http 8000
 ```
