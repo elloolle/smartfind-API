@@ -10,6 +10,17 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",  # Specify the PostgreSQL backend
+        "NAME": "smartfind_db",  # Name of your PostgreSQL database
+        "USER": "admin",  # Username for connecting to the database
+        "PASSWORD": "admin",  # Password for the database user
+        "HOST": "localhost",  # Or the IP address/hostname of your PostgreSQL server
+        "PORT": "5432",
+    }
+}
+
 PRODUCTS = {
     "pro_month_subscription": {
         "plan": "pro",

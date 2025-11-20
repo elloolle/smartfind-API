@@ -117,7 +117,6 @@ class SubscriptionView(APIView):
         return Response(payment_session.url)
 
     def post(self, request):
-        logger.debug("sdokldsk_________________")
         subscription = get_last_user_subscription(request.user)
         product_name = request.data.get("product_name")
         if (
