@@ -4,16 +4,19 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework.generics import CreateAPIView
+from rest_framework.generics import RetrieveAPIView
 from authentication.api.serializers import UserSerializer
-
+from loguru import logger
 
 User = get_user_model()
 
 
-class UserView(CreateAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
+class UserView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
 
 
 class UserSignUpView(TokenObtainPairView):
