@@ -1,6 +1,8 @@
 from .base import *
 import os
 from dotenv import load_dotenv
+from loguru import logger
+from pathlib import Path
 
 load_dotenv()
 
@@ -19,4 +21,8 @@ TRIAL_PERIOD_DAYS = 14
 DAYS_BEFORE_SUBSCRIPTION_DEACTIVATION = 1
 DEFAULT_TRIAL_PLAN = "pro"
 SUCCESS_URL = "http://127.0.0.1:8000"
-LOGS_PATH = r"C:\Users\Leo\Desktop\Прога\SmartFind проект\smartfind-API\logs.txt"
+
+LOGS_PATH = Path.cwd() / "logs.txt"
+logger.add(LOGS_PATH)
+
+SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"] = timedelta(days=1000)

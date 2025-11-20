@@ -1,6 +1,6 @@
 from pathlib import Path
 from datetime import timedelta
-from .underSettings.customizable_settings import *
+from .underSettings.unchanged_settings import *
 
 SECRET_KEY = "django-insecure-svr-u2ps=pu^j_d5cq75+%7g$=7aj59_)@g1%^u=!64ni9@01^"
 
@@ -55,7 +55,6 @@ DATABASES = {
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(days=5),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "ROTATE_REFRESH_TOKENS": False,
     "BLACKLIST_AFTER_ROTATION": False,

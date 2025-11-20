@@ -14,8 +14,6 @@ from ..service import get_event, update_user_subscription, get_last_user_subscri
 from ..helpers import get_subscription_plan_from_product_name
 from rest_framework import status
 
-# logger.add(lambda msg: print(msg, end=""))
-logger.add(settings.LOGS_PATH)
 load_dotenv()
 stripe.api_key = os.getenv("TEST_STRIPE_API_KEY")
 
@@ -119,6 +117,7 @@ class SubscriptionView(APIView):
         return Response(payment_session.url)
 
     def post(self, request):
+        logger.debug("sdokldsk_________________")
         subscription = get_last_user_subscription(request.user)
         product_name = request.data.get("product_name")
         if (
