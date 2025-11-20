@@ -152,8 +152,8 @@ class SubscriptionView(APIView):
 
 class TrialSubscriptionView(SubscriptionView):
     def post(self, request):
-        # if not request.user.may_have_trial:
-        #     return Response({"status": "user does not have trial permissions"})
+        if not request.user.may_have_trial:
+            return Response({"status": "user does not have trial permissions"})
         user = request.user
         user.may_have_trial = False
         user.save()

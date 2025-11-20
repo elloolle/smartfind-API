@@ -5,6 +5,10 @@ docker compose --file deployment/docker-compose.yaml up -d # поднять по
 python manage.py migrate
 python manage.py runserver
 ```
+## Запуск тестов
+```bash
+python manage.py test
+```
 ## Тестирование вебхуков
 ```bash
 stripe listen --forward-to localhost:8000/api/payments/webhook/  # активация stripe cli     
