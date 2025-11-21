@@ -40,8 +40,6 @@ class WebhookView(APIView):
         event = get_event(request)
         data = event["data"]["object"]
         event_type = event["type"]
-        logger.info(event_type)
-        logger.info(data)
         user = None
         if isinstance(data.get("customer"), str):
             user = self.get_user_by_customer(data["customer"])
@@ -142,9 +140,9 @@ class SubscriptionView(APIView):
         user = request.user
         subscription = get_last_user_subscription(user)
 
-        if not subscription:
+        if subscription.plan == settings.PRODUCTS["default_subscription"]["plan"]:
             return Response(
-                {"error": "user aren't subscribed"},
+                {"error": "user can't delete default subscription"},
                 status=status.HTTP_405_METHOD_NOT_ALLOWED,
             )
 

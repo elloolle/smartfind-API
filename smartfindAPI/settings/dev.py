@@ -27,10 +27,7 @@ PRODUCTS = {
         "month_price": 100,
         "delay": timedelta(days=30),
     },
-    "default_subscription": {
-        "plan": "free_plan",
-        "month_price": 0,
-    },
+    "default_subscription": {"plan": "free_plan", "month_price": 0, "delay": None},
 }
 TRIAL_PERIOD_DAYS = 14
 DAYS_BEFORE_SUBSCRIPTION_DEACTIVATION = 1

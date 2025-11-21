@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 from django.contrib.auth import get_user_model
 from .helpers import makeChoicesEnum, now
@@ -5,6 +7,12 @@ from django.conf import settings
 
 User = get_user_model()
 from enum import Enum
+
+default_subscription_month_price = settings.PRODUCTS["default_subscription"][
+    "month_price"
+]
+default_subscription_delay = settings.PRODUCTS["default_subscription"]["delay"]
+default_subscription_plan = settings.PRODUCTS["default_subscription"]["plan"]
 
 
 @makeChoicesEnum(["init", "pending", "failed", "refunded", "succeeded"])
@@ -42,14 +50,12 @@ class Payment(models.Model):
 
 
 class Subscription(models.Model):
-    id = models.CharField(max_length=256, primary_key=True)
+    id = models.CharField(max_length=256, primary_key=True, default=uuid.uuid4)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     status = models.CharField(
         default=SubscriptionStatus.active, choices=SubscriptionStatus.choices()
     )
-    month_price = models.FloatField(default=0)
+    month_price = models.FloatField(default=default_subscription_month_price)
     start_period = models.DateTimeField(default=now)
-    delay = models.DurationField(null=True, default=None)
-    plan = models.CharField(
-        default=settings.PRODUCTS["default_subscription"]["plan"], max_length=64
-    )
+    delay = models.DurationField(null=True, default=default_subscription_delay)
+    plan = models.CharField(default=default_subscription_plan, max_length=64)

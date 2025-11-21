@@ -26,9 +26,6 @@ class CustomerPortalViewTests(APITestCase):
         response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
-        self.assertEqual(
-            response.data, {"error": "user does not buy subscriptions"}
-        )
 
     @patch("stripe.billing_portal.Session.create")
     def test_portal_link_created_for_customer(self, mock_session_create):

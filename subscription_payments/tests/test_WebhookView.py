@@ -41,8 +41,8 @@ class StripeWebhookTests(APITestCase):
 
         self.assertEqual(response.status_code, 200)
         subscriptions = Subscription.objects.filter()
-        self.assertEqual(subscriptions.count(), 1)
-        subscription = subscriptions.first()
+        self.assertEqual(subscriptions.count(), 2)
+        subscription = subscriptions[1]
         self.assertIsNotNone(subscription)
         self.assertEqual(subscription.id, event_data["data"]["object"]["id"])
         self.assertEqual(subscription.user, self.user)

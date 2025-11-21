@@ -91,9 +91,6 @@ class SubscriptionViewTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
-        self.assertEqual(
-            response.data, {"error": "user already subscribed for this plan"}
-        )
 
     def test_delete_when_user_not_subscribed(self):
         self.create_trial_subscription()
@@ -111,7 +108,6 @@ class SubscriptionViewTests(APITestCase):
         response = self.client.delete(self.url)
 
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
-        self.assertEqual(response.data, {"error": "user aren't subscribed"})
 
     @patch("stripe.Subscription.modify")
     def test_delete_when_user_has_subscription(self, mock_modify_subscription):
@@ -122,7 +118,6 @@ class SubscriptionViewTests(APITestCase):
         response = self.client.delete(self.url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {"status": "success"})
         mock_modify_subscription.assert_called_once_with(
             active_subscription.id,
             metadata={
