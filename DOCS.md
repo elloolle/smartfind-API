@@ -48,5 +48,8 @@ New invoices may still be *created* but will be immediately **closed**.
 Occurs when a **trial ends without a payment method**.  
 Paused subscriptions do **not** generate invoices and can be resumed once a payment method is added.
 
-### Тестовые карты
+### Test cards
 https://docs.stripe.com/testing#declined-payments 
+4000000000000002 - decline
+4000000000000341 - accept and after decline all payments
+4242424242424242 - accept

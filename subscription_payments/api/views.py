@@ -40,6 +40,8 @@ class WebhookView(APIView):
         event = get_event(request)
         data = event["data"]["object"]
         event_type = event["type"]
+        logger.info(event_type)
+        logger.info(data)
         user = None
         if isinstance(data.get("customer"), str):
             user = self.get_user_by_customer(data["customer"])
@@ -51,24 +53,6 @@ class WebhookView(APIView):
                 subscription_status=data["status"],
                 product_name=product_name,
             )
-        # if (
-        #     event_type.startswith("payment_intent.")
-        #     or event_type.startswith("invoice.")
-        #     or event_type.startswith("charge.")
-        # ):
-        #     payment_status = get_payment_status(data["status"])
-        #     amount = None
-        #     if event_type.startswith("invoice."):
-        #         amount = data["amount_paid"] / 10
-        #     else:
-        #         amount = data["amount"] / 100
-        #     Payment.objects.update_or_create(
-        #         id=data["id"],
-        #         user=user,
-        #         type=event_type.split(".")[0],
-        #         amount=amount,
-        #         status=payment_status,
-        #     )
         return Response({"status": "success"})
 
 
@@ -209,3 +193,6 @@ class PaymentView(APIView):
             "date_created"
         )
         return Response(PaymentSerializer(user_payments, many=True).data)
+
+
+# class PaymentMethodView()

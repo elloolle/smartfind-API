@@ -24,8 +24,11 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        end_period = instance.start_period + instance.delay
-        data["end_period"] = str(end_period.isoformat())
+        end_period = None
+        if instance.delay:
+            end_period = instance.start_period + instance.delay
+            end_period = str(end_period.isoformat())
+        data["end_period"] = end_period
         return data
 
 

@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-from .helpers import makeChoicesEnum
+from .helpers import makeChoicesEnum, now
+from django.conf import settings
 
 User = get_user_model()
 from enum import Enum
@@ -43,8 +44,12 @@ class Payment(models.Model):
 class Subscription(models.Model):
     id = models.CharField(max_length=256, primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    status = models.CharField(choices=SubscriptionStatus.choices())
-    month_price = models.FloatField()
-    start_period = models.DateTimeField()
-    delay = models.DurationField()
-    plan = models.CharField(max_length=64)
+    status = models.CharField(
+        default=SubscriptionStatus.active, choices=SubscriptionStatus.choices()
+    )
+    month_price = models.FloatField(default=0)
+    start_period = models.DateTimeField(default=now)
+    delay = models.DurationField(null=True, default=None)
+    plan = models.CharField(
+        default=settings.PRODUCTS["default_subscription"]["plan"], max_length=64
+    )
