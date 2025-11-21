@@ -10,7 +10,12 @@ from .serializers import PaymentSerializer
 from loguru import logger
 from django.contrib.auth import get_user_model
 from django.conf import settings
-from ..service import get_event, update_user_subscription, get_last_user_subscription
+from ..service import (
+    get_event,
+    update_user_subscription,
+    get_last_user_subscription,
+    get_payment_status,
+)
 from ..helpers import get_subscription_plan_from_product_name
 from rest_framework import status
 
@@ -46,6 +51,24 @@ class WebhookView(APIView):
                 subscription_status=data["status"],
                 product_name=product_name,
             )
+        # if (
+        #     event_type.startswith("payment_intent.")
+        #     or event_type.startswith("invoice.")
+        #     or event_type.startswith("charge.")
+        # ):
+        #     payment_status = get_payment_status(data["status"])
+        #     amount = None
+        #     if event_type.startswith("invoice."):
+        #         amount = data["amount_paid"] / 10
+        #     else:
+        #         amount = data["amount"] / 100
+        #     Payment.objects.update_or_create(
+        #         id=data["id"],
+        #         user=user,
+        #         type=event_type.split(".")[0],
+        #         amount=amount,
+        #         status=payment_status,
+        #     )
         return Response({"status": "success"})
 
 
@@ -120,7 +143,8 @@ class SubscriptionView(APIView):
         subscription = get_last_user_subscription(request.user)
         product_name = request.data.get("product_name")
         if (
-            subscription
+            not settings.IGNORE_CLONE_SUBSCRIPTIONS
+            and subscription
             and get_subscription_plan_from_product_name(product_name)
             == subscription.plan
         ):
@@ -177,3 +201,11 @@ class CustomerPortalView(APIView):
             return_url=success_url,
         )
         return Response({"portal_session_link": portal_session.url})
+
+
+class PaymentView(APIView):
+    def get(self, request):
+        user_payments = Payment.objects.filter(user=request.user).order_by(
+            "date_created"
+        )
+        return Response(PaymentSerializer(user_payments, many=True).data)

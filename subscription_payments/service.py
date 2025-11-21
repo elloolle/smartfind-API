@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import os
-from typing import TypedDict
 
 from dotenv import load_dotenv
 import stripe
-from psycopg2 import DATETIME
 
-from .models import Subscription, SubscriptionStatus
+from .models import Subscription, PaymentStatus
 from django.conf import settings
 from loguru import logger
 from datetime import timedelta
@@ -35,19 +33,15 @@ def get_event(request):
 
 def update_user_subscription(id, user, subscription_status, product_name):
     product = settings.PRODUCTS[product_name]
-    try:
-        Subscription.objects.get(id=id)
-        Subscription.objects.filter(id=id).update(status=subscription_status)
-    except Subscription.DoesNotExist:
-        Subscription.objects.create(
-            id=id,
-            user=user,
-            status=subscription_status,
-            month_price=product["month_price"],
-            start_period=now(),
-            delay=product["delay"],
-            plan=product["plan"],
-        )
+    Subscription.objects.update_or_create(
+        id=id,
+        user=user,
+        status=subscription_status,
+        month_price=product["month_price"],
+        start_period=now(),
+        delay=product["delay"],
+        plan=product["plan"],
+    )
 
 
 def get_last_user_subscription(user):
@@ -56,3 +50,31 @@ def get_last_user_subscription(user):
         return None
 
     return subscriptions.first()
+
+
+def get_payment_status(status):
+    if status in ["failed", "disputed", "uncollectible", "canceled", "void", "deleted"]:
+        return PaymentStatus.failed
+
+    elif status in ["refunded", "partially_refunded"]:
+        return PaymentStatus.refunded
+
+    elif status in ["succeeded", "paid"]:
+        return PaymentStatus.succeeded
+
+    elif status in [
+        "pending",
+        "draft",
+        "open",
+        "requires_payment_method",
+        "requires_confirmation",
+        "requires_action",
+        "processing",
+        "requires_capture",
+        "incomplete_expired",
+    ]:
+        return PaymentStatus.pending
+
+    else:
+        logger.error("Unknown payment status: {}".format(status))
+        return PaymentStatus.other

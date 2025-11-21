@@ -37,3 +37,5 @@ LOGS_PATH = Path.cwd() / "logs.txt"
 logger.add(LOGS_PATH)
 
 SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"] = timedelta(days=1000)
+
+IGNORE_CLONE_SUBSCRIPTIONS = True

@@ -6,7 +6,7 @@ User = get_user_model()
 from enum import Enum
 
 
-@makeChoicesEnum(["init", "pending"])
+@makeChoicesEnum(["init", "pending", "failed", "refunded", "succeeded"])
 class PaymentStatus(Enum):
     pass
 
@@ -32,14 +32,12 @@ class SubscriptionStatus(Enum):
 class Payment(models.Model):
     id = models.CharField(max_length=256, primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    type = models.CharField(max_length=64)
+    type = models.CharField(max_length=256)
     status = models.CharField(
         default=PaymentStatus.init, choices=PaymentStatus.choices()
     )
+    amount = models.FloatField(null=True)
     date_created = models.DateTimeField(auto_now_add=True, db_index=True)
-
-
-# нужна ли вообще эта модель?
 
 
 class Subscription(models.Model):

@@ -43,8 +43,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 AUTH_USER_MODEL = "authentication.User"
 
 
-
-
 SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "ROTATE_REFRESH_TOKENS": False,

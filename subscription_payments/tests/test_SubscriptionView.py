@@ -9,7 +9,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
-
+from django.test import override_settings
 from ..models import Subscription, SubscriptionStatus
 
 User = get_user_model()
@@ -76,6 +76,7 @@ class SubscriptionViewTests(APITestCase):
         self.assertEqual(response.data, {"checkout_url": checkout_url})
         mock_create_payment_link.assert_called_once_with("pro_month_subscription")
 
+    @override_settings(IGNORE_CLONE_SUBSCRIPTIONS=False)
     @patch("subscription_payments.api.views.get_subscription_plan_from_product_name")
     def test_post_subscription_already_exist(self, mock_get_subscription_plan):
         self.create_trial_subscription()

@@ -47,3 +47,6 @@ New invoices may still be *created* but will be immediately **closed**.
 ### **paused**
 Occurs when a **trial ends without a payment method**.  
 Paused subscriptions do **not** generate invoices and can be resumed once a payment method is added.
+
+### Тестовые карты
+https://docs.stripe.com/testing#declined-payments 

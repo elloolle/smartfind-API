@@ -3,6 +3,7 @@ from subscription_payments.api.views import (
     WebhookView,
     TrialSubscriptionView,
     CustomerPortalView,
+    PaymentView,
 )
 from django.urls import path
 from rest_framework.routers import DefaultRouter
@@ -12,4 +13,5 @@ urlpatterns = [
     path("set_trial/", TrialSubscriptionView.as_view(), name="set_trial"),
     path("portal_link/", CustomerPortalView.as_view(), name="portal_link"),
     path("webhook/", WebhookView.as_view(), name="webhook"),
+    path("", PaymentView.as_view(), name="payment"),
 ]

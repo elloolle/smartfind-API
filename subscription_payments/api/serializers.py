@@ -27,3 +27,9 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         end_period = instance.start_period + instance.delay
         data["end_period"] = str(end_period.isoformat())
         return data
+
+
+class PaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Payment
+        fields = ["id"]
