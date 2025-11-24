@@ -2,7 +2,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ...services.embeddings_api import get_embeddings_from_model, get_models
+from embeddings.service import get_embeddings_from_model, get_models
 
 
 class GetEmbeddingsView(APIView):

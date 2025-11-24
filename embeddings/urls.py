@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .api.views.embeddings_view import GetEmbeddingsView
+from embeddings.api.embeddings_view import GetEmbeddingsView
 
 urlpatterns = [
     path("embeddings/", GetEmbeddingsView.as_view(), name="get_embeddings"),

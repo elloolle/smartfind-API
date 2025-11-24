@@ -40,3 +40,12 @@ logger.add(LOGS_PATH)
 SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"] = timedelta(days=1000)
 
 IGNORE_CLONE_SUBSCRIPTIONS = True
+IS_WEBHOOK_LOGGING_ON = True
+WEBHOOKS_LOGS_PATH = (
+    Path.cwd()
+    / "subscription_payments"
+    / "tests"
+    / "webhook_test_events"
+    / "first_sample.py"
+)
+WEBHOOKS_EVENT_NAME_TO_LOG = "customer.subscription.created"

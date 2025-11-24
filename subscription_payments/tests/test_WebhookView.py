@@ -6,13 +6,9 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework.test import APITestCase
-from .webhook_test_events import (
-    charge_failed,
-    customer_subscription_created,
-    invoice_payment_succeeded,
-    payment_intent_payment_failed,
-)
-from subscription_payments.models import Payment, PaymentStatus, Subscription
+from subscription_payments.models import Subscription
+from .webhook_test_events.first_sample import customer_subscription_created
+from django.test import override_settings
 
 User = get_user_model()
 
@@ -26,6 +22,7 @@ class StripeWebhookTests(APITestCase):
             customer_id="cus_TRgdbk7xcFh4Dw",
         )
 
+    @override_settings(IS_WEBHOOK_LOGGING_ON=False)
     @patch("stripe.Webhook.construct_event")
     def test_payment_intent_succeeded(self, mock_construct_event):
         event_data = customer_subscription_created

@@ -15,8 +15,9 @@ from ..service import (
     update_user_subscription,
     get_last_user_subscription,
     get_payment_status,
+    log_webhooks,
 )
-from ..helpers import get_subscription_plan_from_product_name, log_webhooks
+from ..helpers import get_subscription_plan_from_product_name
 from rest_framework import status
 
 load_dotenv()

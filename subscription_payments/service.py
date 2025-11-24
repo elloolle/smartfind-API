@@ -80,3 +80,21 @@ def get_payment_status(status):
     else:
         logger.error("Unknown payment status: {}".format(status))
         return PaymentStatus.other
+
+
+def log_webhooks(request):
+    if not settings.IS_WEBHOOK_LOGGING_ON:
+        return
+    logs_path = settings.WEBHOOKS_LOGS_PATH
+    event_name = settings.WEBHOOKS_EVENT_NAME_TO_LOG
+
+    event = get_event(request)
+    if event["type"] != event_name:
+        return
+    event_dict = event.to_dict_recursive()
+    logger.add(
+        settings.WEBHOOKS_LOGS_PATH,
+        format="{message}",  # <-- никаких INFO, времени, уровня — только сообщение!
+        level="TRACE",  # позволяет логировать .log(...)
+    )
+    logger.log("TRACE", f"{event_dict!r},")
