@@ -16,7 +16,7 @@ from ..service import (
     get_last_user_subscription,
     get_payment_status,
 )
-from ..helpers import get_subscription_plan_from_product_name
+from ..helpers import get_subscription_plan_from_product_name, log_webhooks
 from rest_framework import status
 
 load_dotenv()
@@ -37,6 +37,7 @@ class WebhookView(APIView):
             raise
 
     def post(self, request):
+        log_webhooks(request)
         event = get_event(request)
         data = event["data"]["object"]
         event_type = event["type"]

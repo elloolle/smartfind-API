@@ -13,7 +13,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework.authtoken",
-    "authentication",
+    "users",
     "embeddings",
     "rest_framework_simplejwt",
     "subscription_payments",
@@ -40,7 +40,7 @@ REST_FRAMEWORK = {
 }
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
-AUTH_USER_MODEL = "authentication.User"
+AUTH_USER_MODEL = "users.User"
 
 
 SIMPLE_JWT = {

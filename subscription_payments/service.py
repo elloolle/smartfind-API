@@ -35,12 +35,14 @@ def update_user_subscription(id, user, subscription_status, product_name):
     product = settings.PRODUCTS[product_name]
     Subscription.objects.update_or_create(
         id=id,
-        user=user,
-        status=subscription_status,
-        month_price=product["month_price"],
-        start_period=now(),
-        delay=product["delay"],
-        plan=product["plan"],
+        defaults={
+            "user": user,
+            "status": subscription_status,
+            "month_price": product["month_price"],
+            "start_period": now(),
+            "delay": product["delay"],
+            "plan": product["plan"],
+        },
     )
 
 

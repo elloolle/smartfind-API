@@ -24,3 +24,7 @@ def makeChoicesEnum(list):
 def get_subscription_plan_from_product_name(product_name):
     product = settings.PRODUCTS[product_name]
     return product["plan"]
+
+
+def log_webhooks(request):
+    pass

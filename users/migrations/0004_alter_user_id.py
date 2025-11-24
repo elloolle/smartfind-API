@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("authentication", "0003_user_may_have_trial"),
+        ("users", "0003_user_may_have_trial"),
     ]
 
     operations = [

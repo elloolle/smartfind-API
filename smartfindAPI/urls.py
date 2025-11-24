@@ -24,7 +24,7 @@ urlpatterns = [
         "api/",
         include(
             [
-                path("", include("authentication.urls")),
+                path("", include("users.urls")),
                 path("", include("embeddings.urls")),
                 path("payments/", include("subscription_payments.urls")),
             ]
