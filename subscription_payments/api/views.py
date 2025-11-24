@@ -42,6 +42,7 @@ class WebhookView(APIView):
         data = event["data"]["object"]
         event_type = event["type"]
         user = None
+        #TODO: переписать на validators
         if isinstance(data.get("customer"), str):
             user = self.get_user_by_customer(data["customer"])
         if event_type.startswith("customer.subscription."):
@@ -57,6 +58,7 @@ class WebhookView(APIView):
 
 class SubscriptionView(APIView):
     def get_customer(self) -> str:
+        #TODO: переписать на serializers
         if self.request.user.customer_id:
             return self.request.user.customer_id
         params = {}
@@ -125,6 +127,7 @@ class SubscriptionView(APIView):
     def post(self, request):
         subscription = get_last_user_subscription(request.user)
         product_name = request.data.get("product_name")
+        #TODO: validators
         if (
             not settings.IGNORE_CLONE_SUBSCRIPTIONS
             and subscription
@@ -139,6 +142,7 @@ class SubscriptionView(APIView):
 
     def delete(self, request):
         user = request.user
+        #TODO: serializers
         subscription = get_last_user_subscription(user)
 
         if subscription.plan == settings.PRODUCTS["default_subscription"]["plan"]:
@@ -157,6 +161,7 @@ class SubscriptionView(APIView):
 
 class TrialSubscriptionView(SubscriptionView):
     def post(self, request):
+        #TODO: validator
         if not request.user.may_have_trial:
             return Response(
                 {"error": "user does not have trial permissions"},

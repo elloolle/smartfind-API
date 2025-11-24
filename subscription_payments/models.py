@@ -8,6 +8,7 @@ from django.conf import settings
 User = get_user_model()
 from enum import Enum
 
+#TODO: переименовать константы
 default_subscription_month_price = settings.PRODUCTS["default_subscription"][
     "month_price"
 ]

@@ -36,7 +36,7 @@ class AccessTokenView(TokenObtainPairView):
         token_data = serializer.validated_data
         return Response({"token": token_data["access"]})
 
-
+# TODO: remove
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 

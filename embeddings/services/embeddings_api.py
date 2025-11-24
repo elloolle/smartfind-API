@@ -32,7 +32,7 @@ EMBEDDING_MODELS = {
     "google": {"method": get_gemini_embeddings, "models": ["gemini-embedding-001"]},
 }
 
-
+#TODO: типизация
 def get_embeddings_from_model(texts, api_key, source, model):
     return EMBEDDING_MODELS[source]["method"](texts, api_key, model)
 
