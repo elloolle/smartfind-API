@@ -45,4 +45,4 @@ def get_embeddings_from_model(texts, source, model, dimensions=None):
 
 
 def get_models():
-    return {key: value["models"] for key, value in EMBEDDING_MODELS.items()}
+    return {key: value["models"] for key, value in settings.EMBEDDING_MODELS.items()}

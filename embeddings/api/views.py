@@ -6,7 +6,7 @@ from embeddings.service import get_embeddings_from_model, get_models
 
 
 class GetEmbeddingsView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def post(self, request):
         embedding = get_embeddings_from_model(
