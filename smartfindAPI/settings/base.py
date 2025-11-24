@@ -1,8 +1,10 @@
 from pathlib import Path
 import os
+from dotenv import load_dotenv
 from datetime import timedelta
 from .underSettings.unchanged_settings import *
 
+load_dotenv()
 SECRET_KEY = "django-insecure-svr-u2ps=pu^j_d5cq75+%7g$=7aj59_)@g1%^u=!64ni9@01^"
 
 INSTALLED_APPS = [
@@ -81,6 +83,32 @@ SIMPLE_JWT = {
 
 
 EMBEDDINGS_API_KEYS = {
-    "openai": os.environ['OPENAI_API_KEY'],
-    'google': os.environ['GOOGLE_API_KEY']
+    "openai": os.environ["OPENAI_API_KEY"],
+    "google": os.environ["GOOGLE_API_KEY"],
+    "openrouter": os.environ["OPENROUTER_API_KEY"],
+}
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+
+EMBEDDING_MODELS = {
+    "openai": {
+        "method": "",
+        "models": [
+            "text-embedding-3-small",
+            "text-embedding-3-large",
+            "text-embedding-ada-002",
+        ],
+    },
+    "google": {"method": "", "models": ["gemini-embedding-001"]},
+    "openrouter": {
+        "method": "",
+        "models": [
+            "mistralai/mistral-embed-2312",
+            "mistralai/codestral-embed-2505",
+            "google/gemini-embedding-001",
+            "openai/text-embedding-ada-002",
+            "openai/text-embedding-3-large",
+            "openai/text-embedding-3-small",
+            "qwen/qwen3-embedding-8b",
+        ],
+    },
 }

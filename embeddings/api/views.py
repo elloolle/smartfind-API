@@ -13,6 +13,7 @@ class GetEmbeddingsView(APIView):
             texts=request.data["texts"],
             source=request.data["source"],
             model=request.data["model"],
+            dimensions=request.data.get("dimensions"),
         )
         return Response(embedding)
 
