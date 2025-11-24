@@ -1,4 +1,4 @@
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -11,7 +11,6 @@ class GetEmbeddingsView(APIView):
     def post(self, request):
         embedding = get_embeddings_from_model(
             texts=request.data["texts"],
-            api_key=request.data["APIKey"],
             source=request.data["source"],
             model=request.data["model"],
         )

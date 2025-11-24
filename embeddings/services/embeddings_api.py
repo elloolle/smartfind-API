@@ -1,9 +1,9 @@
 from google import genai
 from openai import OpenAI
+from django.conf import settings
 
-
-def get_openai_embeddings(texts, api_key, model):
-    client = OpenAI(api_key=api_key)
+def get_openai_embeddings(texts, model):
+    client = OpenAI(api_key=settings.EMBEDDINGS_API_KEYS['openai'])
     response = client.embeddings.create(
         input=texts,
         model=model,
@@ -11,8 +11,8 @@ def get_openai_embeddings(texts, api_key, model):
     return [value.embedding for value in response.data]
 
 
-def get_gemini_embeddings(texts, api_key, model):
-    gemini_client = genai.Client(api_key=api_key)
+def get_gemini_embeddings(texts, model):
+    gemini_client = genai.Client(api_key=settings.EMBEDDINGS_API_KEYS['google'])
     result = gemini_client.models.embed_content(
         model=model,
         contents=texts,
@@ -33,8 +33,8 @@ EMBEDDING_MODELS = {
 }
 
 
-def get_embeddings_from_model(texts, api_key, source, model):
-    return EMBEDDING_MODELS[source]["method"](texts, api_key, model)
+def get_embeddings_from_model(texts, source, model):
+    return EMBEDDING_MODELS[source]["method"](texts, model)
 
 
 def get_models():

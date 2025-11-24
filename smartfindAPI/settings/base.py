@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 from datetime import timedelta
 from .underSettings.unchanged_settings import *
 
@@ -76,4 +77,10 @@ SIMPLE_JWT = {
     "TOKEN_BLACKLIST_SERIALIZER": "rest_framework_simplejwt.serializers.TokenBlacklistSerializer",
     "SLIDING_TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.TokenObtainSlidingSerializer",
     "SLIDING_TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSlidingSerializer",
+}
+
+
+EMBEDDINGS_API_KEYS = {
+    "openai": os.environ['OPENAI_API_KEY'],
+    'google': os.environ['GOOGLE_API_KEY']
 }
