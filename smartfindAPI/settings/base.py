@@ -1,12 +1,7 @@
 from pathlib import Path
-import os
-from dotenv import load_dotenv
 from datetime import timedelta
 
-load_dotenv()
-
 ROOT_URLCONF = "smartfindAPI.urls"
-
 
 TEMPLATES = [
     {
@@ -71,7 +66,6 @@ INSTALLED_APPS = [
     "embeddings",
     "rest_framework_simplejwt",
     "subscription_payments",
-    "djstripe",
 ]
 
 
