@@ -3,7 +3,6 @@ from openai import OpenAI
 from django.conf import settings
 from google.genai import types
 
-
 def get_embeddings_getter_with_OpenAI_lib(api_key, base_url=None):
     def embeddings_getter(texts, model, dimensions=None):
         client = OpenAI(api_key=api_key, base_url=base_url)
