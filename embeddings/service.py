@@ -2,25 +2,35 @@ from google import genai
 from openai import OpenAI
 from django.conf import settings
 from google.genai import types
+from functools import partial
 
-def get_embeddings_getter_with_OpenAI_lib(api_key, base_url=None):
-    def embeddings_getter(texts, model, dimensions=None):
-        client = OpenAI(api_key=api_key, base_url=base_url)
-        kwargs = {"input": texts, "model": model}
-        if dimensions is not None:
-            kwargs["dimensions"] = dimensions
+def get_embeddings_with_OpenAI_lib(texts, model, dimensions, base_url, api_key):
+    client = OpenAI(api_key=api_key, base_url=base_url)
+    kwargs = {"input": texts, "model": model}
+    if dimensions is not None:
+        kwargs["dimensions"] = dimensions
 
-        response = client.embeddings.create(**kwargs)
-        return [value.embedding for value in response.data]
+    response = client.embeddings.create(**kwargs)
+    return [value.embedding for value in response.data]
 
     return embeddings_getter
 
-
-get_openai_embeddings = get_embeddings_getter_with_OpenAI_lib(
-    settings.EMBEDDINGS_API_KEYS["openai"]
+get_openai_embeddings = partial(
+    get_embeddings_with_OpenAI_lib,
+    base_url=None,
+    api_key=settings.EMBEDDINGS_API_KEYS["openai"],
 )
-get_openrouter_embeddings = get_embeddings_getter_with_OpenAI_lib(
-    settings.EMBEDDINGS_API_KEYS["openrouter"], settings.OPENROUTER_BASE_URL
+
+get_openrouter_embeddings = partial(
+    get_embeddings_with_OpenAI_lib,
+    base_url=settings.OPENROUTER_BASE_URL,
+    api_key=settings.EMBEDDINGS_API_KEYS["openrouter"],
+)
+
+get_morphllm_embeddings = partial(
+    get_embeddings_with_OpenAI_lib,
+    base_url=settings.MORPHLM_BASE_URL,
+    api_key=settings.EMBEDDINGS_API_KEYS["morphllm"],
 )
 
 
@@ -37,6 +47,7 @@ def get_gemini_embeddings(texts, model, dimensions=None):
 settings.EMBEDDING_MODELS["openai"]["method"] = get_openai_embeddings
 settings.EMBEDDING_MODELS["google"]["method"] = get_gemini_embeddings
 settings.EMBEDDING_MODELS["openrouter"]["method"] = get_openrouter_embeddings
+settings.EMBEDDING_MODELS["morphllm"]["method"] = get_morphllm_embeddings
 
 
 def get_embeddings_from_model(texts, source, model, dimensions=None):
@@ -44,4 +55,7 @@ def get_embeddings_from_model(texts, source, model, dimensions=None):
 
 
 def get_models():
-    return {key: value["models"] for key, value in settings.EMBEDDING_MODELS.items()}
+    models_info = settings.EMBEDDING_MODELS.copy()
+    for key in models_info.keys():
+        del models_info[key]["method"]
+    return models_info
