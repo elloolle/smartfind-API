@@ -1,23 +1,20 @@
+from django.core.serializers import serialize
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.generics import GenericAPIView
 from rest_framework import viewsets, mixins
 from dotenv import load_dotenv
 import os
 import stripe
-from subscription_payments.models import Payment, PaymentStatus, Subscription
-from .serializers import PaymentSerializer
 from loguru import logger
 from django.contrib.auth import get_user_model
 from django.conf import settings
+
+from .serializers import SubscriptionProductNameSerializer
 from ..service import (
-    get_event,
-    update_user_subscription,
     get_last_user_subscription,
-    get_payment_status,
-    log_webhooks,
 )
-from ..helpers import get_subscription_plan_from_product_name
 from rest_framework import status
 
 load_dotenv()
@@ -28,48 +25,12 @@ success_url = settings.SUCCESS_URL
 User = get_user_model()
 
 
-class WebhookView(APIView):
-    @classmethod
-    def get_user_by_customer(cls, customer_id: str):
-        try:
-            return User.objects.get(customer_id=customer_id)
-        except User.DoesNotExist:
-            logger.error("Unknown customer_id: {}", customer_id)
-            raise
+class SubscriptionView(GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = SubscriptionProductNameSerializer
 
-    def post(self, request):
-        log_webhooks(request)
-        event = get_event(request)
-        data = event["data"]["object"]
-        event_type = event["type"]
-        user = None
-        if isinstance(data.get("customer"), str):
-            user = self.get_user_by_customer(data["customer"])
-        if event_type.startswith("customer.subscription."):
-            product_name = data["items"]["data"][0]["price"]["lookup_key"]
-            update_user_subscription(
-                id=data["id"],
-                user=user,
-                subscription_status=data["status"],
-                product_name=product_name,
-            )
-        return Response({"status": "success"})
-
-
-class SubscriptionView(APIView):
     def get_customer(self) -> str:
-        if self.request.user.customer_id:
-            return self.request.user.customer_id
-        params = {}
-        if self.request.user.email:
-            params["email"] = self.request.user.email
-        if self.request.user.username:
-            params["name"] = self.request.user.username
-        customer = stripe.Customer.create(**params)
-
-        self.request.user.customer_id = customer.id
-        self.request.user.save()
-        return customer.id
+        return self.request.user.customer_id
 
     def create_session(
         self, mode: str, price: str, metadata=None, url_param=None, **kwargs
@@ -115,39 +76,22 @@ class SubscriptionView(APIView):
     def create_payment_link(self, product_name, trial_period_days=0):
         self.get_customer()
         payment_session = self.create_new_subscription(product_name, trial_period_days)
-        Payment.objects.create(
-            id=payment_session.id,
-            user=self.request.user,
-            type=type,
-            status=PaymentStatus.pending,
-        )
         return Response(payment_session.url)
 
     def post(self, request):
-        subscription = get_last_user_subscription(request.user)
-        product_name = request.data.get("product_name")
-        if (
-            not settings.IGNORE_CLONE_SUBSCRIPTIONS
-            and subscription
-            and get_subscription_plan_from_product_name(product_name)
-            == subscription.plan
-        ):
-            return Response(
-                {"error": "user already subscribed for this plan"},
-                status=status.HTTP_405_METHOD_NOT_ALLOWED,
-            )
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        product_name = serializer.data["product_name"]
         return self.create_payment_link(product_name)
 
     def delete(self, request):
         user = request.user
         subscription = get_last_user_subscription(user)
-
-        if subscription.plan == settings.PRODUCTS["default_subscription"]["plan"]:
+        if not subscription:
             return Response(
                 {"error": "user can't delete default subscription"},
-                status=status.HTTP_405_METHOD_NOT_ALLOWED,
+                status=status.HTTP_400_BAD_REQUEST,
             )
-
         metadata = {
             "collection_method": "send_invoice",
             "days_until_due": settings.DAYS_BEFORE_SUBSCRIPTION_DEACTIVATION,
@@ -157,6 +101,8 @@ class SubscriptionView(APIView):
 
 
 class TrialSubscriptionView(SubscriptionView):
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
         if not request.user.may_have_trial:
             return Response(
@@ -173,6 +119,8 @@ class TrialSubscriptionView(SubscriptionView):
 
 
 class CustomerPortalView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
         customer_id = request.user.customer_id
         if not customer_id:
@@ -188,11 +136,7 @@ class CustomerPortalView(APIView):
 
 
 class PaymentView(APIView):
-    def get(self, request):
-        user_payments = Payment.objects.filter(user=request.user).order_by(
-            "date_created"
-        )
-        return Response(PaymentSerializer(user_payments, many=True).data)
+    permission_classes = [IsAuthenticated]
 
 
 # class PaymentMethodView()
