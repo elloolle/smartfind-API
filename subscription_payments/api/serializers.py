@@ -1,38 +1,30 @@
 from rest_framework import serializers
+from djstripe.models import Subscription
+from django.contrib.auth import get_user_model
+from ..service import get_last_user_subscription
+from django.conf import settings
 
-from ..models import Payment, Subscription
-
-
-class PaymentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Payment
-        fields = ["type", "amount"]
+User = get_user_model()
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
-        fields = [
-            "id",
-            "user",
-            "status",
-            "month_price",
-            "start_period",
-            "delay",
-            "plan",
-        ]
+        fields = ["__all__"]
 
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        end_period = None
-        if instance.delay:
-            end_period = instance.start_period + instance.delay
-            end_period = str(end_period.isoformat())
-        data["end_period"] = end_period
+
+class SubscriptionProductNameSerializer(serializers.Serializer):
+    product_name = serializers.CharField()
+
+    def validate(self, data):
+        user = self.context["request"].user
+        subscription = get_last_user_subscription(user)
+        product_name = request.data.get("product_name")
+        if (
+            not settings.IGNORE_CLONE_SUBSCRIPTIONS
+            and subscription
+            and product_name == subscription.plan
+        ):
+            raise serializers.ValidationError("User already subscribed for this plan")
+        data["product_name"] = product_name
         return data
-
-
-class PaymentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Payment
-        fields = ["id"]

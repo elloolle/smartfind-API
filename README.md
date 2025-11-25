@@ -1,7 +1,7 @@
 ## Запуск проекта
 ```bash
 pip install -r requirements.txt
-docker compose --file deployment/docker-compose.yaml up -d # поднять постгрес
+docker compose --file deployment/docker-compose.yaml up -d
 python manage.py migrate
 python manage.py runserver
 ```
@@ -17,4 +17,19 @@ stripe trigger checkout.session.completed # отправка запроса на
 ## Прокинуть вебхуки
 ```bash
 ngrok http 8000
+```
+## Установить верификацию сигнатуры вебхуков
+```python
+ from djstripe.models import WebhookEndpoint
+ 
+ raw = settings.DJSTRIPE_WEBHOOK_SECRET
+ try:
+     endpoints = WebhookEndpoint.objects.all()
+ except Exception:
+     endpoints = None
+ if not raw or not endpoints:
+     return
+ endpoint = endpoints[0]
+ endpoint.secret = raw
+ endpoint.save()
 ```

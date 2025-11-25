@@ -19,6 +19,8 @@ class UserSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         subscription = get_last_user_subscription(instance)
+        if not subscription:
+            return data
         data["subscription"] = SubscriptionSerializer(subscription).data
         del data["subscription"]["user"]
         return data

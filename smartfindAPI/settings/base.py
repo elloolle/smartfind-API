@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     "embeddings",
     "rest_framework_simplejwt",
     "subscription_payments",
+    "djstripe",
 ]
 
 
@@ -170,3 +171,11 @@ EMBEDDING_MODELS = {
         "max_dimension": 1024,
     },
 }
+
+STRIPE_LIVE_SECRET_KEY = os.environ["LIVE_STRIPE_API_KEY"]
+STRIPE_TEST_SECRET_KEY = os.environ["TEST_STRIPE_API_KEY"]
+STRIPE_LIVE_MODE = False
+
+DJSTRIPE_FOREIGN_KEY_TO_FIELD = "id"
+# DJSTRIPE_WEBHOOK_VALIDATION = "verify_signature"
+DJSTRIPE_WEBHOOK_SECRET = os.environ["TEST_STRIPE_WEBHOOK_KEY"]
