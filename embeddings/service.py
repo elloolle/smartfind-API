@@ -3,6 +3,7 @@ from openai import OpenAI
 from django.conf import settings
 from google.genai import types
 from functools import partial
+from copy import deepcopy
 
 def get_embeddings_with_OpenAI_lib(texts, model, dimensions, base_url, api_key):
     client = OpenAI(api_key=api_key, base_url=base_url)
@@ -55,7 +56,7 @@ def get_embeddings_from_model(texts, source, model, dimensions=None):
 
 
 def get_models():
-    models_info = settings.EMBEDDING_MODELS.copy()
+    models_info = deepcopy(settings.EMBEDDING_MODELS)
     for key in models_info.keys():
         del models_info[key]["method"]
     return models_info
