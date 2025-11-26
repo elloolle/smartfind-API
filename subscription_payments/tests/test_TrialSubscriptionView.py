@@ -2,23 +2,13 @@ from unittest.mock import patch
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from djstripe.models import Customer
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 User = get_user_model()
-
-
-class TrialFlag:
-    def __init__(self, value=True):
-        self.value = value
-
-    def __bool__(self):
-        return self.value
-
-    def set(self, value):
-        self.value = value
 
 
 class TrialSubscriptionViewTests(APITestCase):
@@ -31,6 +21,23 @@ class TrialSubscriptionViewTests(APITestCase):
         token = str(RefreshToken.for_user(self.user).access_token)
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
         self.url = "/api/payments/set_trial/"
+        self._create_customer()
+
+    def _create_customer(self, customer_id="cus_trial_user"):
+        Customer.objects.create(
+            id=customer_id,
+            livemode=False,
+            subscriber=self.user,
+            metadata={},
+            stripe_data={
+                "id": customer_id,
+                "email": self.user.email,
+                "name": self.user.username,
+                "invoice_settings": {"default_payment_method": None},
+            },
+        )
+        self.user.customer_id = customer_id
+        self.user.save(update_fields=["customer_id"])
 
     @patch("subscription_payments.api.views.TrialSubscriptionView.create_payment_link")
     def test_trial_subscription_created(
@@ -44,10 +51,14 @@ class TrialSubscriptionViewTests(APITestCase):
         self.user.refresh_from_db()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, result)
-        self.assertFalse(self.user.may_have_trial)
+        mock_create_payment_link.assert_called_once()
         self.assertEqual(
             mock_create_payment_link.call_args.kwargs["trial_period_days"],
             settings.TRIAL_PERIOD_DAYS,
+        )
+        self.assertEqual(
+            mock_create_payment_link.call_args.kwargs["product_name"],
+            settings.DEFAULT_TRIAL_PLAN,
         )
 
     def test_trial_subscription_forbidden_without_permission(self):
