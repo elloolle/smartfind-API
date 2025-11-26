@@ -77,6 +77,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Invoice
         fields = ["djstripe_id", "status", "period_start", "amount_due"]
+        ordering = ["period_start"]
 
     def get_status(self, obj):
         return obj.stripe_data["status"]

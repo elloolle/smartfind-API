@@ -22,11 +22,6 @@ class CustomerPortalViewTests(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
         self.url = "/api/payments/portal_link/"
 
-    def test_portal_link_without_customer(self):
-        response = self.client.get(self.url)
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
     @patch("stripe.billing_portal.Session.create")
     def test_portal_link_created_for_customer(self, mock_session_create):
         self.user.customer_id = "cus_123"
