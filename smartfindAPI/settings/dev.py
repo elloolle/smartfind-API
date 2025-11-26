@@ -27,11 +27,15 @@ PRODUCTS = {
         "month_price": 100,
         "delay": timedelta(days=30),
     },
-    "default_subscription": {"plan": "free_plan", "month_price": 0, "delay": None},
+    "default_subscription": {
+        "plan": "free_plan",
+        "month_price": 0,
+        "delay": "never expires",
+    },
 }
 TRIAL_PERIOD_DAYS = 14
 DAYS_BEFORE_SUBSCRIPTION_DEACTIVATION = 1
-DEFAULT_TRIAL_PLAN = "pro"
+DEFAULT_TRIAL_PLAN = "pro_month_subscription"
 SUCCESS_URL = "http://127.0.0.1:8000"
 
 LOGS_PATH = Path.cwd() / "logs.txt"

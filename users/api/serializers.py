@@ -1,5 +1,8 @@
 from rest_framework import serializers
-from subscription_payments.service import get_last_user_subscription
+from subscription_payments.service import (
+    get_last_user_subscription,
+    get_default_subscription_data,
+)
 from ..models import User
 from subscription_payments.api.serializers import SubscriptionSerializer
 
@@ -20,7 +23,7 @@ class UserSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         subscription = get_last_user_subscription(instance)
         if not subscription:
+            data["subscription"] = get_default_subscription_data()
             return data
         data["subscription"] = SubscriptionSerializer(subscription).data
-        del data["subscription"]["user"]
         return data

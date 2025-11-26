@@ -15,15 +15,23 @@ from djstripe.models import Subscription, Customer
 User = get_user_model()
 
 
+def get_default_subscription_data():
+    return {
+        "status": "active",
+        "plan": settings.PRODUCTS["default_subscription"]["plan"],
+        "expires_date": "never",
+    }
+
+
 def get_last_user_subscription(user):
-    logger.debug(user.customer_id)
-    customer = Customer.objects.get(id=user.customer_id)
-    if not customer.has_any_active_subscription():
+    try:
+        customer = Customer.objects.get(id=user.customer_id)
+    except Customer.DoesNotExist:
         return None
-    subscriptions = customer.active_subscriptions()
-    if len(subscriptions) > 1:
-        logger.error(f"{customer.id} has {len(subscriptions)} active subscriptions")
-    return subscriptions.first()
+    subscriptions = Subscription.objects.filter(customer=customer)
+    if not subscriptions:
+        return None
+    return subscriptions.order_by("-created").first()
 
 
 def log_webhooks(request):

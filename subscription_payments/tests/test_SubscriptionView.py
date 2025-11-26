@@ -90,7 +90,7 @@
 #             format="json",
 #         )
 #
-#         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+#         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 #
 #     def test_delete_when_user_not_subscribed(self):
 #         self.create_trial_subscription()
@@ -107,7 +107,7 @@
 #
 #         response = self.client.delete(self.url)
 #
-#         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+#         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 #
 #     @patch("stripe.Subscription.modify")
 #     def test_delete_when_user_has_subscription(self, mock_modify_subscription):
