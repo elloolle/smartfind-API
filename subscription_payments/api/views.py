@@ -16,6 +16,8 @@ from ..service import (
     get_last_user_subscription,
 )
 from rest_framework import status
+from functools import wraps
+from django.utils.decorators import method_decorator
 
 load_dotenv()
 stripe.api_key = os.getenv("TEST_STRIPE_API_KEY")
@@ -25,6 +27,22 @@ success_url = settings.SUCCESS_URL
 User = get_user_model()
 
 
+def ensure_stripe_customer(view_func):
+    @wraps(view_func)
+    def wrapped_view(request, *args, **kwargs):
+        if request.user.is_authenticated and not request.user.customer_id:
+            params = {}
+            if request.user.username:
+                params["name"] = request.user.username
+            customer = stripe.Customer.create(**params)
+            request.user.customer_id = customer.id
+            request.user.save()
+        return view_func(request, *args, **kwargs)
+
+    return wrapped_view
+
+
+@method_decorator(ensure_stripe_customer, name="post")
 class SubscriptionView(GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = SubscriptionProductNameSerializer
@@ -74,7 +92,6 @@ class SubscriptionView(GenericAPIView):
         )
 
     def create_payment_link(self, product_name, trial_period_days=0):
-        self.get_customer()
         payment_session = self.create_new_subscription(product_name, trial_period_days)
         return Response(payment_session.url)
 
@@ -92,25 +109,27 @@ class SubscriptionView(GenericAPIView):
                 {"error": "user can't delete default subscription"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        metadata = {
-            "collection_method": "send_invoice",
-            "days_until_due": settings.DAYS_BEFORE_SUBSCRIPTION_DEACTIVATION,
-        }
-        stripe.Subscription.modify(subscription.id, metadata=metadata)
+        stripe.Subscription.modify(
+            subscription.id,
+            collection_method="send_invoice",
+            days_until_due=settings.DAYS_BEFORE_SUBSCRIPTION_DEACTIVATION,
+        )
         return Response({"status": "success"})
 
 
+@method_decorator(ensure_stripe_customer, name="post")
 class TrialSubscriptionView(SubscriptionView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+
         if not request.user.may_have_trial:
             return Response(
                 {"error": "user does not have trial permissions"},
-                status=status.HTTP_405_METHOD_NOT_ALLOWED,
+                status=status.HTTP_400_BAD_REQUEST,
             )
         user = request.user
-        user.may_have_trial = False
+        user.may_have_trial = True
         user.save()
         return self.create_payment_link(
             product_name=settings.DEFAULT_TRIAL_PLAN,
@@ -118,6 +137,7 @@ class TrialSubscriptionView(SubscriptionView):
         )
 
 
+@method_decorator(ensure_stripe_customer, name="get")
 class CustomerPortalView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -126,7 +146,7 @@ class CustomerPortalView(APIView):
         if not customer_id:
             return Response(
                 {"error": "user does not buy subscriptions"},
-                status=status.HTTP_405_METHOD_NOT_ALLOWED,
+                status=status.HTTP_400_BAD_REQUEST,
             )
         portal_session = stripe.billing_portal.Session.create(
             customer=customer_id,
@@ -137,6 +157,3 @@ class CustomerPortalView(APIView):
 
 class PaymentView(APIView):
     permission_classes = [IsAuthenticated]
-
-
-# class PaymentMethodView()
