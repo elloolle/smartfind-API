@@ -1,4 +1,5 @@
 from django.core.serializers import serialize
+from djstripe.models import PaymentMethod, Invoice
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -11,7 +12,11 @@ from loguru import logger
 from django.contrib.auth import get_user_model
 from django.conf import settings
 
-from .serializers import SubscriptionProductNameSerializer
+from .serializers import (
+    SubscriptionProductNameSerializer,
+    PaymentMethodSerializer,
+    InvoiceSerializer,
+)
 from ..service import (
     get_last_user_subscription,
 )
@@ -42,6 +47,7 @@ def ensure_stripe_customer(view_func):
     return wrapped_view
 
 
+@method_decorator(ensure_stripe_customer, name="delete")
 @method_decorator(ensure_stripe_customer, name="post")
 class SubscriptionView(GenericAPIView):
     permission_classes = [IsAuthenticated]
@@ -155,5 +161,21 @@ class CustomerPortalView(APIView):
         return Response({"portal_session_link": portal_session.url})
 
 
-class PaymentView(APIView):
+class PaymentMethodViewSet(
+    mixins.ListModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet
+):
     permission_classes = [IsAuthenticated]
+    serializer_class = PaymentMethodSerializer
+
+    def get_queryset(self):
+        customer_id = self.request.user.customer_id
+        return PaymentMethod.objects.filter(customer=customer_id)
+
+
+class PaymentViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = InvoiceSerializer
+
+    def get_queryset(self):
+        customer_id = self.request.user.customer_id
+        return Invoice.objects.filter(customer=customer_id)
