@@ -2,6 +2,7 @@ from django.conf import settings
 
 from ..models import EmbeddingLogs, TextEmbeddingPair
 from rest_framework import serializers
+from pathlib import Path
 
 
 class TextEmbeddingPairSerializer(serializers.ModelSerializer):
@@ -39,3 +40,16 @@ class OnlyReadEmbeddingLogsSerializer(serializers.ModelSerializer):
         )
         data["text_embedding_pairs"] = text_embedding_pairs_serializer.data
         return data
+
+
+class FileNameSerializer(serializers.Serializer):
+    file_name = serializers.CharField()
+
+    def validate_file_name(self, value):
+        file_path = settings.STATIC_FILES_PATH / Path(value)
+        if not file_path.is_file():
+            raise serializers.ValidationError(
+                detail=f"{file_path} isn't a correct file name"
+            )
+        self.file_path = file_path
+        return value

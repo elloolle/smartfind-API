@@ -10,5 +10,5 @@ from users.api.views import (
 urlpatterns = [
     path("signup/", UserSignUpView.as_view(), name="signup"),
     path("login/", AccessTokenView.as_view(), name="login"),
-    path("user/", UserView.as_view(), name="user"),
+    path("", UserView.as_view(), name="user"),
 ]

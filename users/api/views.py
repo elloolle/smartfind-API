@@ -19,7 +19,7 @@ class UserView(APIView):
 
 
 class UserSignUpView(TokenObtainPairView):
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         user_serializer = UserSerializer(data=request.data)
         user_serializer.is_valid(raise_exception=True)
         user_serializer.save()

@@ -14,6 +14,7 @@ from .serializers import (
     SubscriptionProductNameSerializer,
     PaymentMethodSerializer,
     InvoiceSerializer,
+    CheckSubscriptionExistsSerializer,
 )
 from ..service import (
     get_last_user_subscription,
@@ -89,6 +90,14 @@ class SubscriptionView(EnsureStripeCustomerMixin, GenericAPIView):
         payment_session = self.create_new_subscription(product_name, trial_period_days)
         return Response(payment_session.url)
 
+    def get_serializer_class(self):
+        if self.request.method == "POST":
+            return SubscriptionProductNameSerializer
+        elif self.request.method == "DELETE":
+            return CheckSubscriptionExistsSerializer
+        else:
+            raise f"serializer_class don't exists for {self.request.method}"
+
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -96,16 +105,11 @@ class SubscriptionView(EnsureStripeCustomerMixin, GenericAPIView):
         return self.create_payment_link(product_name)
 
     def delete(self, request):
-        # TODO validation
-        user = request.user
-        subscription = get_last_user_subscription(user)
-        if not subscription:
-            return Response(
-                {"error": "user can't delete default subscription"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        subscription_id = serializer.subscription_id
         stripe.Subscription.modify(
-            subscription.id,
+            subscription_id,
             collection_method="send_invoice",
             days_until_due=settings.DAYS_BEFORE_SUBSCRIPTION_DEACTIVATION,
         )
@@ -137,7 +141,7 @@ class CustomerPortalView(EnsureStripeCustomerMixin, APIView):
     def get(self, request):
         portal_session = stripe.billing_portal.Session.create(
             customer=request.user.customer_id,
-            return_url=settings.PORTAL_SUCCESS_URLs,
+            return_url=settings.PORTAL_SUCCESS_URL,
         )
         return Response({"portal_session_link": portal_session.url})
 

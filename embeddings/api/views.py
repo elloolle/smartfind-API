@@ -1,3 +1,5 @@
+from django.core.serializers import serialize
+from django.http import FileResponse
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
@@ -8,6 +10,7 @@ from .serializers import (
     EmbeddingLogsSerializer,
     TextEmbeddingPairSerializer,
     OnlyReadEmbeddingLogsSerializer,
+    FileNameSerializer,
 )
 from embeddings.service import get_embeddings_from_model, get_models
 from ..models import EmbeddingLogs
@@ -54,6 +57,17 @@ class GetEmbeddingsView(generics.CreateAPIView):
 
 
 class EmbeddingLogsView(ReadOnlyModelViewSet):
+    permission_classes = [AllowAny]
     serializer_class = OnlyReadEmbeddingLogsSerializer
     queryset = EmbeddingLogs.objects.all()
+
+
+class DownloadFileView(GenericAPIView):
     permission_classes = [AllowAny]
+    serializer_class = FileNameSerializer
+
+    def get(self, request):
+        serializer = self.get_serializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        file_path = serializer.file_path
+        return FileResponse(open(file_path, "rb"), as_attachment=True)

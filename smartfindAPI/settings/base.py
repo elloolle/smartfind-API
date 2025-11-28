@@ -94,7 +94,7 @@ REST_FRAMEWORK = {
     ],
 }
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
+BASE_DIR = Path.cwd()
 AUTH_USER_MODEL = "users.User"
 
 
