@@ -137,7 +137,7 @@ class CustomerPortalView(EnsureStripeCustomerMixin, APIView):
     def get(self, request):
         portal_session = stripe.billing_portal.Session.create(
             customer=request.user.customer_id,
-            return_url=settings.PORTAL_SUCCESS_URL,
+            return_url=settings.PORTAL_SUCCESS_URLs,
         )
         return Response({"portal_session_link": portal_session.url})
 
