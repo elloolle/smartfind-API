@@ -1,10 +1,10 @@
-from functools import partial
-
 from google import genai
 from openai import OpenAI
 from django.conf import settings
 from google.genai import types
 from typing import Callable
+from functools import partial
+from copy import deepcopy
 
 
 def get_embeddings_with_open_ai_lib(
@@ -69,9 +69,9 @@ def get_embeddings_from_model(
 ):
     return settings.EMBEDDING_MODELS[source]["method"](texts, model, dimensions)
 
-
+  
 def get_models() -> dict[str, object]:
-    models_info = settings.EMBEDDING_MODELS.copy()
+    models_info = deepcopy(settings.EMBEDDING_MODELS)
     for key in models_info.keys():
         del models_info[key]["method"]
     return models_info
