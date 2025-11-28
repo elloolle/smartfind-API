@@ -11,14 +11,31 @@ class TextEmbeddingPairSerializer(serializers.ModelSerializer):
 
 
 class EmbeddingLogsSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = EmbeddingLogs
-        fields = ["source", "model", "dimensions", "text_embedding_pairs"]
+        fields = ["source", "model", "dimensions"]
 
     def validate(self, attrs):
         source = attrs.get("source")
         model = attrs.get("model")
         if not settings.EMBEDDING_MODELS.get(source):
             raise serializers.ValidationError(detail="wrong source")
-        if not settings.EMBEDDING_MODELS[source].get(model):
+        if model not in settings.EMBEDDING_MODELS[source]["models"]:
             raise serializers.ValidationError(detail="wrong model")
+        return attrs
+
+
+class OnlyReadEmbeddingLogsSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = EmbeddingLogs
+        fields = ["source", "model", "dimensions"]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        text_embedding_pairs_serializer = TextEmbeddingPairSerializer(
+            TextEmbeddingPair.objects.filter(embedding_logs=instance.id), many=True
+        )
+        data["text_embedding_pairs"] = text_embedding_pairs_serializer.data
+        return data

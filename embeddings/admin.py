@@ -1,3 +1,6 @@
 from django.contrib import admin
 
-# Register your models here.
+from embeddings.models import EmbeddingLogs, TextEmbeddingPair
+
+admin.site.register(EmbeddingLogs)
+admin.site.register(TextEmbeddingPair)

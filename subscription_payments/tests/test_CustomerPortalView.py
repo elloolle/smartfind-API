@@ -36,5 +36,5 @@ class CustomerPortalViewTests(APITestCase):
             response.data, {"portal_session_link": "https://portal.stripe.test"}
         )
         mock_session_create.assert_called_once_with(
-            customer="cus_123", return_url=settings.SUCCESS_URL
+            customer="cus_123", return_url=settings.PORTAL_SUCCESS_URL
         )
