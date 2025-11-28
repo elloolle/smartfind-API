@@ -22,7 +22,7 @@ class UserViewTests(APITestCase):
         )
         token = str(RefreshToken.for_user(self.user).access_token)
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
-        self.url = "/api/user/"
+        self.url = "/api/users/"
         self.customer = None
 
     def _create_customer(self, customer_id="cus_user_view"):

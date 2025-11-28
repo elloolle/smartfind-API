@@ -55,6 +55,21 @@ class SubscriptionProductNameSerializer(serializers.Serializer):
         return data
 
 
+class CheckSubscriptionExistsSerializer(serializers.Serializer):
+    subscription_id = serializers.CharField(read_only=True)
+
+    def validate(self, data):
+        request = self.context.get("request")
+        subscription = get_last_user_subscription(request.user)
+        if not subscription:
+            raise serializers.ValidationError(
+                detail="user can't delete default subscription"
+            )
+        self.subscription_id = subscription.id
+        data["subscription_id"] = subscription.id
+        return data
+
+
 class PaymentMethodSerializer(serializers.ModelSerializer):
     card_number = serializers.SerializerMethodField()
 

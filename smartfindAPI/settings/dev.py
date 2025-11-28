@@ -55,3 +55,4 @@ WEBHOOKS_LOGS_PATH = (
 )
 WEBHOOKS_EVENT_NAME_TO_LOG = "customer.subscription.created"
 STRIPE_SECRET_KEY = os.getenv("TEST_STRIPE_API_KEY")
+STATIC_FILES_PATH = BASE_DIR / Path("static/")

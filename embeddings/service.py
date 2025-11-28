@@ -7,7 +7,7 @@ from google.genai import types
 from typing import Callable
 
 
-def get_embeddings_with_OpenAI_lib(
+def get_embeddings_with_open_ai_lib(
     texts: list[str],
     model: str,
     dimensions: int | None,
@@ -26,7 +26,7 @@ def get_embeddings_with_OpenAI_lib(
 
 get_openai_embeddings: Callable[[list[str], str, int | None], list[list[float]]] = (
     partial(
-        get_embeddings_with_OpenAI_lib,
+        get_embeddings_with_open_ai_lib,
         base_url=None,
         api_key=settings.EMBEDDINGS_API_KEYS["openai"],
     )
@@ -34,13 +34,13 @@ get_openai_embeddings: Callable[[list[str], str, int | None], list[list[float]]]
 GetEmbeddingsFromModelType = Callable[[list[str], str, int | None], list[list[float]]]
 
 get_openrouter_embeddings: GetEmbeddingsFromModelType = partial(
-    get_embeddings_with_OpenAI_lib,
+    get_embeddings_with_open_ai_lib,
     base_url=settings.OPENROUTER_BASE_URL,
     api_key=settings.EMBEDDINGS_API_KEYS["openrouter"],
 )
 
 get_morphllm_embeddings: GetEmbeddingsFromModelType = partial(
-    get_embeddings_with_OpenAI_lib,
+    get_embeddings_with_open_ai_lib,
     base_url=settings.MORPHLM_BASE_URL,
     api_key=settings.EMBEDDINGS_API_KEYS["morphllm"],
 )
