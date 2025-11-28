@@ -6,7 +6,7 @@ from django.conf import settings
 class EmbeddingLogs(models.Model):
     source = models.CharField(max_length=64)
     model = models.CharField(max_length=64)
-    dimensions = models.IntegerField()
+    dimensions = models.IntegerField(default=None, null=True)
 
 
 class TextEmbeddingPair(models.Model):

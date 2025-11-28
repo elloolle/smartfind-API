@@ -2,9 +2,13 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.viewsets import generics
+from rest_framework.viewsets import generics, ReadOnlyModelViewSet
 
-from .serializers import EmbeddingLogsSerializer, TextEmbeddingPairSerializer
+from .serializers import (
+    EmbeddingLogsSerializer,
+    TextEmbeddingPairSerializer,
+    OnlyReadEmbeddingLogsSerializer,
+)
 from embeddings.service import get_embeddings_from_model, get_models
 from ..models import EmbeddingLogs
 
@@ -47,3 +51,9 @@ class GetEmbeddingsView(generics.CreateAPIView):
     def get(self, request):
         response = get_models()
         return Response(response)
+
+
+class EmbeddingLogsView(ReadOnlyModelViewSet):
+    serializer_class = OnlyReadEmbeddingLogsSerializer
+    queryset = EmbeddingLogs.objects.all()
+    permission_classes = [AllowAny]
