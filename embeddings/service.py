@@ -5,6 +5,7 @@ from google.genai import types
 from functools import partial
 from copy import deepcopy
 
+
 def get_embeddings_with_OpenAI_lib(texts, model, dimensions, base_url, api_key):
     client = OpenAI(api_key=api_key, base_url=base_url)
     kwargs = {"input": texts, "model": model}
@@ -13,6 +14,7 @@ def get_embeddings_with_OpenAI_lib(texts, model, dimensions, base_url, api_key):
 
     response = client.embeddings.create(**kwargs)
     return [value.embedding for value in response.data]
+
 
 get_openai_embeddings = partial(
     get_embeddings_with_OpenAI_lib,
