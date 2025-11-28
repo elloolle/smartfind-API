@@ -5,12 +5,12 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.conf import settings
+
 
 User = get_user_model()
 
 
-class CustomerPortalViewTests(APITestCase):
+class GetEmbeddingsViewTests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(
             username="portal_user",

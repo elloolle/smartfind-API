@@ -5,8 +5,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.generics import GenericAPIView
 from rest_framework import viewsets, mixins
-from dotenv import load_dotenv
-import os
 import stripe
 from loguru import logger
 from django.contrib.auth import get_user_model
@@ -21,35 +19,25 @@ from ..service import (
     get_last_user_subscription,
 )
 from rest_framework import status
-from functools import wraps
-from django.utils.decorators import method_decorator
 
-load_dotenv()
-stripe.api_key = os.getenv("TEST_STRIPE_API_KEY")
-
-success_url = settings.SUCCESS_URL
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
 User = get_user_model()
 
 
-def ensure_stripe_customer(view_func):
-    @wraps(view_func)
-    def wrapped_view(request, *args, **kwargs):
-        if request.user.is_authenticated and not request.user.customer_id:
+class EnsureStripeCustomerMixin:
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if not request.user.customer_id:
             params = {}
             if request.user.username:
                 params["name"] = request.user.username
             customer = stripe.Customer.create(**params)
             request.user.customer_id = customer.id
             request.user.save()
-        return view_func(request, *args, **kwargs)
-
-    return wrapped_view
 
 
-@method_decorator(ensure_stripe_customer, name="delete")
-@method_decorator(ensure_stripe_customer, name="post")
-class SubscriptionView(GenericAPIView):
+class SubscriptionView(EnsureStripeCustomerMixin, GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = SubscriptionProductNameSerializer
 
@@ -69,8 +57,8 @@ class SubscriptionView(GenericAPIView):
             allow_promotion_codes=True,
             customer=self.get_customer(),
             mode=mode,
-            success_url=success_url,
-            cancel_url=success_url,
+            success_url=settings.CHECKOUT_SUCCESS_URL,
+            cancel_url=settings.CHECKOUT_CANCEL_URL,
             metadata=metadata,
             **kwargs,
         )
@@ -108,6 +96,7 @@ class SubscriptionView(GenericAPIView):
         return self.create_payment_link(product_name)
 
     def delete(self, request):
+        # TODO validation
         user = request.user
         subscription = get_last_user_subscription(user)
         if not subscription:
@@ -123,12 +112,11 @@ class SubscriptionView(GenericAPIView):
         return Response({"status": "success"})
 
 
-@method_decorator(ensure_stripe_customer, name="post")
 class TrialSubscriptionView(SubscriptionView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-
+        # TODO валидация
         if not request.user.may_have_trial:
             return Response(
                 {"error": "user does not have trial permissions"},
@@ -143,26 +131,22 @@ class TrialSubscriptionView(SubscriptionView):
         )
 
 
-@method_decorator(ensure_stripe_customer, name="get")
-class CustomerPortalView(APIView):
+class CustomerPortalView(EnsureStripeCustomerMixin, APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        customer_id = request.user.customer_id
-        if not customer_id:
-            return Response(
-                {"error": "user does not buy subscriptions"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
         portal_session = stripe.billing_portal.Session.create(
-            customer=customer_id,
-            return_url=success_url,
+            customer=request.user.customer_id,
+            return_url=settings.CHECKOUT_SUCCESS_URL,
         )
         return Response({"portal_session_link": portal_session.url})
 
 
 class PaymentMethodViewSet(
-    mixins.ListModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet
+    EnsureStripeCustomerMixin,
+    mixins.ListModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
 ):
     permission_classes = [IsAuthenticated]
     serializer_class = PaymentMethodSerializer
@@ -172,7 +156,9 @@ class PaymentMethodViewSet(
         return PaymentMethod.objects.filter(customer=customer_id)
 
 
-class PaymentViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+class PaymentViewSet(
+    EnsureStripeCustomerMixin, mixins.ListModelMixin, viewsets.GenericViewSet
+):
     permission_classes = [IsAuthenticated]
     serializer_class = InvoiceSerializer
 

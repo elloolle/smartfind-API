@@ -1,21 +1,48 @@
+from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.viewsets import generics
 
+from .serializers import EmbeddingLogsSerializer, TextEmbeddingPairSerializer
 from embeddings.service import get_embeddings_from_model, get_models
+from ..models import EmbeddingLogs
 
 
-class GetEmbeddingsView(APIView):
+class GetEmbeddingsView(generics.CreateAPIView):
     permission_classes = [AllowAny]
+    queryset = EmbeddingLogs.objects.all()
+    serializer_class = EmbeddingLogsSerializer
 
-    def post(self, request):
-        embedding = get_embeddings_from_model(
-            texts=request.data["texts"],
-            source=request.data["source"],
-            model=request.data["model"],
-            dimensions=request.data.get("dimensions"),
+    def perform_create(self, serializer):
+        embedding_logs = serializer.save()
+        texts = self.request.data["texts"]
+        embeddings = get_embeddings_from_model(
+            texts=texts,
+            source=embedding_logs.source,
+            model=embedding_logs.model,
+            dimensions=embedding_logs.dimensions,
         )
-        return Response(embedding)
+        text_embedding_pairs_data = [
+            {
+                "text": texts[i],
+                "embedding": embeddings[i],
+                "embedding_logs": embedding_logs.id,
+            }
+            for i in range(len(texts))
+        ]
+        text_embedding_pairs_serializer = TextEmbeddingPairSerializer(
+            data=text_embedding_pairs_data, many=True
+        )
+        if not text_embedding_pairs_serializer.is_valid():
+            logger.error(text_embedding_pairs_serializer.errors)
+        else:
+            text_embedding_pairs_serializer.save()
+        self.embeddings = embeddings
+
+    def create(self, request, *args, **kwargs):
+        super().create(request, *args, **kwargs)
+        return Response(self.embeddings)
 
     def get(self, request):
         response = get_models()

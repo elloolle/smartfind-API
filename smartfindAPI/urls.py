@@ -18,7 +18,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
-#TODO: консистентно сделать базовые пути
+# TODO: консистентно сделать базовые пути
 urlpatterns = [
     path("admin/", admin.site.urls),
     path(
