@@ -114,7 +114,6 @@ class UserViewTests(APITestCase):
         expected_subscription = SubscriptionSerializer(newest_subscription).data
 
         response = self.client.get(self.url)
-        print("1" * 100)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
             response.data,
