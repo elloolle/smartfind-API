@@ -1,41 +1,54 @@
+from functools import partial
+
 from google import genai
 from openai import OpenAI
 from django.conf import settings
 from google.genai import types
-from functools import partial
-from copy import deepcopy
+from typing import Callable
 
 
-def get_embeddings_with_OpenAI_lib(texts, model, dimensions, base_url, api_key):
+def get_embeddings_with_OpenAI_lib(
+    texts: list[str],
+    model: str,
+    dimensions: int | None,
+    base_url: str | None,
+    api_key: str,
+) -> list[list[float]]:
     client = OpenAI(api_key=api_key, base_url=base_url)
-    kwargs = {"input": texts, "model": model}
-    if dimensions is not None:
-        kwargs["dimensions"] = dimensions
-
-    response = client.embeddings.create(**kwargs)
+    if dimensions is None:
+        response = client.embeddings.create(input=texts, model=model)
+    else:
+        response = client.embeddings.create(
+            input=texts, model=model, dimensions=dimensions
+        )
     return [value.embedding for value in response.data]
 
 
-get_openai_embeddings = partial(
-    get_embeddings_with_OpenAI_lib,
-    base_url=None,
-    api_key=settings.EMBEDDINGS_API_KEYS["openai"],
+get_openai_embeddings: Callable[[list[str], str, int | None], list[list[float]]] = (
+    partial(
+        get_embeddings_with_OpenAI_lib,
+        base_url=None,
+        api_key=settings.EMBEDDINGS_API_KEYS["openai"],
+    )
 )
+GetEmbeddingsFromModelType = Callable[[list[str], str, int | None], list[list[float]]]
 
-get_openrouter_embeddings = partial(
+get_openrouter_embeddings: GetEmbeddingsFromModelType = partial(
     get_embeddings_with_OpenAI_lib,
     base_url=settings.OPENROUTER_BASE_URL,
     api_key=settings.EMBEDDINGS_API_KEYS["openrouter"],
 )
 
-get_morphllm_embeddings = partial(
+get_morphllm_embeddings: GetEmbeddingsFromModelType = partial(
     get_embeddings_with_OpenAI_lib,
     base_url=settings.MORPHLM_BASE_URL,
     api_key=settings.EMBEDDINGS_API_KEYS["morphllm"],
 )
 
 
-def get_gemini_embeddings(texts, model, dimensions=None):
+def get_gemini_embeddings(
+    texts: list[str], model: str, dimensions: int | None = None
+) -> list[list[float]]:
     gemini_client = genai.Client(api_key=settings.EMBEDDINGS_API_KEYS["google"])
     result = gemini_client.models.embed_content(
         model=model,
@@ -51,12 +64,14 @@ settings.EMBEDDING_MODELS["openrouter"]["method"] = get_openrouter_embeddings
 settings.EMBEDDING_MODELS["morphllm"]["method"] = get_morphllm_embeddings
 
 
-def get_embeddings_from_model(texts, source, model, dimensions=None):
+def get_embeddings_from_model(
+    texts: list[str], source: str, model: str, dimensions: str | None = None
+):
     return settings.EMBEDDING_MODELS[source]["method"](texts, model, dimensions)
 
 
-def get_models():
-    models_info = deepcopy(settings.EMBEDDING_MODELS)
+def get_models() -> dict[str, object]:
+    models_info = settings.EMBEDDING_MODELS.copy()
     for key in models_info.keys():
         del models_info[key]["method"]
     return models_info

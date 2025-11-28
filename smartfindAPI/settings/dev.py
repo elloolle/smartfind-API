@@ -36,7 +36,8 @@ PRODUCTS = {
 TRIAL_PERIOD_DAYS = 14
 DAYS_BEFORE_SUBSCRIPTION_DEACTIVATION = 1
 DEFAULT_TRIAL_PLAN = "pro_month_subscription"
-SUCCESS_URL = "http://127.0.0.1:8000"
+CHECKOUT_SUCCESS_URL = "http://127.0.0.1:8000"
+CHECKOUT_CANCEL_URL = "http://127.0.0.1:8000"
 
 LOGS_PATH = Path.cwd() / "logs.txt"
 logger.add(LOGS_PATH)
@@ -53,3 +54,4 @@ WEBHOOKS_LOGS_PATH = (
     / "first_sample.py"
 )
 WEBHOOKS_EVENT_NAME_TO_LOG = "customer.subscription.created"
+STRIPE_SECRET_KEY = os.getenv("TEST_STRIPE_API_KEY")
