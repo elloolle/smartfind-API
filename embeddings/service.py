@@ -14,8 +14,6 @@ def get_embeddings_with_OpenAI_lib(texts, model, dimensions, base_url, api_key):
     response = client.embeddings.create(**kwargs)
     return [value.embedding for value in response.data]
 
-    return embeddings_getter
-
 get_openai_embeddings = partial(
     get_embeddings_with_OpenAI_lib,
     base_url=None,
