@@ -8,6 +8,10 @@ class EmbeddingLogs(models.Model):
     model = models.CharField(max_length=64)
     dimensions = models.IntegerField(default=None, null=True)
 
+    class Meta:
+        verbose_name = "Embedding Log"
+        verbose_name_plural = "Embedding Logs"
+
 
 class TextEmbeddingPair(models.Model):
     text = models.TextField()
