@@ -39,25 +39,30 @@ class TrialSubscriptionViewTests(APITestCase):
         self.user.customer_id = customer_id
         self.user.save(update_fields=["customer_id"])
 
-    @patch("subscription_payments.api.views.TrialSubscriptionView.create_payment_link")
+    @patch(
+        "subscription_payments.api.views.TrialSubscriptionView.create_payment_session"
+    )
     def test_trial_subscription_created(
         self,
-        mock_create_payment_link,
+        mock_create_payment_session,
     ):
-        result = {"checkout_url": "https://stripe.test/trial"}
-        mock_create_payment_link.return_value = Response(result)
+        result = {
+            "payment_session_link": "https://stripe.test/trial",
+            "payment_session_id": "cs_test_trial",
+        }
+        mock_create_payment_session.return_value = Response(result)
 
         response = self.client.post(self.url, {})
         self.user.refresh_from_db()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, result)
-        mock_create_payment_link.assert_called_once()
+        mock_create_payment_session.assert_called_once()
         self.assertEqual(
-            mock_create_payment_link.call_args.kwargs["trial_period_days"],
+            mock_create_payment_session.call_args.kwargs["trial_period_days"],
             settings.TRIAL_PERIOD_DAYS,
         )
         self.assertEqual(
-            mock_create_payment_link.call_args.kwargs["product_name"],
+            mock_create_payment_session.call_args.kwargs["product_name"],
             settings.DEFAULT_TRIAL_PLAN,
         )
 

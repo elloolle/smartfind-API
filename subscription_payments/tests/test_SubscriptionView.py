@@ -73,10 +73,13 @@ class SubscriptionViewTests(APITestCase):
             stripe_data=stripe_data,
         )
 
-    @patch("subscription_payments.api.views.SubscriptionView.create_payment_link")
-    def test_post_creates_subscription_session(self, mock_create_payment_link):
-        result = {"checkout_url": "https://stripe.test/checkout"}
-        mock_create_payment_link.return_value = Response(result)
+    @patch("subscription_payments.api.views.SubscriptionView.create_payment_session")
+    def test_post_creates_subscription_session(self, mock_create_payment_session):
+        result = {
+            "payment_session_link": "https://stripe.test/checkout",
+            "payment_session_id": "cs_test_checkout",
+        }
+        mock_create_payment_session.return_value = Response(result)
 
         response = self.client.post(
             self.url,
@@ -86,7 +89,7 @@ class SubscriptionViewTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, result)
-        mock_create_payment_link.assert_called_once_with("pro_month_subscription")
+        mock_create_payment_session.assert_called_once_with("pro_month_subscription")
 
     @override_settings(IGNORE_CLONE_SUBSCRIPTIONS=False)
     def test_post_subscription_already_exist(self):

@@ -18,5 +18,9 @@ urlpatterns = [
     path("set_trial/", TrialSubscriptionView.as_view(), name="set_trial"),
     path("portal_link/", CustomerPortalView.as_view(), name="portal_link"),
     path("stripe/", include("djstripe.urls", namespace="djstripe")),
-    path("<str:payment_session_id>/", PaymentSession.as_view(), name="payment_session"),
+    path(
+        "session/<str:payment_session_id>/",
+        PaymentSession.as_view(),
+        name="payment_session",
+    ),
 ] + router.urls
