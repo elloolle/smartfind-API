@@ -27,6 +27,12 @@ class EmbeddingLogsSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class TextsSerializer(serializers.Serializer):
+    texts = serializers.ListField(
+        child=serializers.CharField(allow_blank=False), min_length=1
+    )
+
+
 class OnlyReadEmbeddingLogsSerializer(serializers.ModelSerializer):
 
     class Meta:

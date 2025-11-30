@@ -11,9 +11,10 @@ from .serializers import (
     TextEmbeddingPairSerializer,
     OnlyReadEmbeddingLogsSerializer,
     FileNameSerializer,
+    TextsSerializer,
 )
 from embeddings.service import get_embeddings_from_model, get_models
-from ..models import EmbeddingLogs
+from ..models import EmbeddingLogs, TextEmbeddingPair
 
 
 class GetEmbeddingsView(generics.CreateAPIView):
@@ -21,35 +22,35 @@ class GetEmbeddingsView(generics.CreateAPIView):
     queryset = EmbeddingLogs.objects.all()
     serializer_class = EmbeddingLogsSerializer
 
-    def perform_create(self, serializer):
-        embedding_logs = serializer.save()
-        texts = self.request.data["texts"]
+    def create_embedding_logs(self):
+        embedding_logs_serializer = EmbeddingLogsSerializer(data=self.request.data)
+        embedding_logs_serializer.is_valid(raise_exception=True)
+        embedding_logs = embedding_logs_serializer.save()
+        return embedding_logs
+
+    def get_texts(self):
+        texts_serializer = TextsSerializer(data=self.request.data)
+        texts_serializer.is_valid(raise_exception=True)
+        texts = texts_serializer.validated_data["texts"]
+        return texts
+
+    def post(self, request, *args, **kwargs):
+        texts = self.get_texts()
+        embedding_logs = self.create_embedding_logs()
         embeddings = get_embeddings_from_model(
             texts=texts,
             source=embedding_logs.source,
             model=embedding_logs.model,
             dimensions=embedding_logs.dimensions,
         )
-        text_embedding_pairs_data = [
-            {
-                "text": texts[i],
-                "embedding": embeddings[i],
-                "embedding_logs": embedding_logs.id,
-            }
+        text_embedding_pairs = [
+            TextEmbeddingPair(
+                text=texts[i], embedding=embeddings[i], embedding_logs=embedding_logs
+            )
             for i in range(len(texts))
         ]
-        text_embedding_pairs_serializer = TextEmbeddingPairSerializer(
-            data=text_embedding_pairs_data, many=True
-        )
-        if not text_embedding_pairs_serializer.is_valid():
-            logger.error(text_embedding_pairs_serializer.errors)
-        else:
-            text_embedding_pairs_serializer.save()
-        self.embeddings = embeddings
-
-    def create(self, request, *args, **kwargs):
-        super().create(request, *args, **kwargs)
-        return Response(self.embeddings)
+        TextEmbeddingPair.objects.bulk_create(text_embedding_pairs)
+        return Response(embeddings)
 
     def get(self, request):
         response = get_models()

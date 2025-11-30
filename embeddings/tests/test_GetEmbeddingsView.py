@@ -90,26 +90,16 @@ class GetEmbeddingsViewTests(APITestCase):
         mock_get_embeddings.assert_not_called()
         self.assertEqual(EmbeddingLogs.objects.count(), 0)
 
-    def _assert_invalid_texts(self, mock_get_embeddings, invalid_texts):
-        error_message = "texts must be a non-empty list of strings"
-        mock_get_embeddings.side_effect = ValidationError(error_message)
-
-        response, payload = self._post(texts=invalid_texts)
-
+    @patch("embeddings.api.views.get_embeddings_from_model")
+    def test_return_400_when_text_is_empty(self, mock_get_embeddings):
+        response, _ = self._post(texts=[])
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, [error_message])
-        mock_get_embeddings.assert_called_once_with(
-            texts=payload["texts"],
-            source=payload["source"],
-            model=payload["model"],
-            dimensions=payload["dimensions"],
-        )
-        self.assertEqual(TextEmbeddingPair.objects.count(), 0)
+        mock_get_embeddings.assert_not_called()
+        self.assertEqual(EmbeddingLogs.objects.count(), 0)
 
     @patch("embeddings.api.views.get_embeddings_from_model")
-    def test_returns_400_when_texts_is_empty(self, mock_get_embeddings):
-        self._assert_invalid_texts(mock_get_embeddings, [])
-
-    @patch("embeddings.api.views.get_embeddings_from_model")
-    def test_returns_400_when_texts_is_not_a_list(self, mock_get_embeddings):
-        self._assert_invalid_texts(mock_get_embeddings, 5)
+    def test_return_400_when_text_is_not_list(self, mock_get_embeddings):
+        response, _ = self._post(texts="abcd")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        mock_get_embeddings.assert_not_called()
+        self.assertEqual(EmbeddingLogs.objects.count(), 0)
