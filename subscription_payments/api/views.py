@@ -86,9 +86,14 @@ class SubscriptionView(EnsureStripeCustomerMixin, GenericAPIView):
             subscription_data={"trial_period_days": trial_period_days},
         )
 
-    def create_payment_link(self, product_name, trial_period_days=0):
+    def create_payment_session(self, product_name, trial_period_days=0):
         payment_session = self.create_new_subscription(product_name, trial_period_days)
-        return Response(payment_session.url)
+        return Response(
+            {
+                "payment_session_link": payment_session.url,
+                "payment_session_id": payment_session.id,
+            }
+        )
 
     def get_serializer_class(self):
         if self.request.method == "POST":
@@ -102,7 +107,7 @@ class SubscriptionView(EnsureStripeCustomerMixin, GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         product_name = serializer.data["product_name"]
-        return self.create_payment_link(product_name)
+        return self.create_payment_session(product_name)
 
     def delete(self, request):
         serializer = self.get_serializer(data=request.data)
@@ -129,7 +134,7 @@ class TrialSubscriptionView(SubscriptionView):
         user = request.user
         user.may_have_trial = True
         user.save()
-        return self.create_payment_link(
+        return self.create_payment_session(
             product_name=settings.DEFAULT_TRIAL_PLAN,
             trial_period_days=settings.TRIAL_PERIOD_DAYS,
         )
@@ -169,3 +174,18 @@ class PaymentViewSet(
     def get_queryset(self):
         customer_id = self.request.user.customer_id
         return Invoice.objects.filter(customer=customer_id)
+
+
+class PaymentSession(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        payment_session_id = kwargs["payment_session_id"]
+        try:
+            payment_session = stripe.checkout.Session.retrieve(id=payment_session_id)
+        except stripe.error.StripeError as e:
+            return Response(
+                {"error": "payment session don't exist"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response({"payment_session_status": payment_session.status})
