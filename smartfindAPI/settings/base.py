@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "subscription_payments",
     "djstripe",
+    "yookassa_payments",
 ]
 
 
@@ -169,7 +170,7 @@ EMBEDDING_MODELS = {
         "max_dimension": 1024,
     },
 }
-
+# Ключи для библиотеки dj stripe
 STRIPE_LIVE_SECRET_KEY = os.environ["LIVE_STRIPE_API_KEY"]
 STRIPE_TEST_SECRET_KEY = os.environ["TEST_STRIPE_API_KEY"]
 STRIPE_LIVE_MODE = False

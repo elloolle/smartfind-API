@@ -33,3 +33,8 @@ ngrok http 8000
  endpoint.secret = raw
  endpoint.save()
 ```
+
+## Создание нового приложения
+```bash
+    python manage.py startapp [name of app] --template ".\utils\app_template"                      
+``` 

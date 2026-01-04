@@ -1,5 +1,5 @@
 payments_tmp/
-logs.txt
+utils/logs.txt
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
