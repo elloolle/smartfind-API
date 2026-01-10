@@ -71,6 +71,8 @@ INSTALLED_APPS = [
     "subscription_payments",
     "djstripe",
     "yookassa_payments",
+    "django_celery_beat",
+    "core",
 ]
 
 

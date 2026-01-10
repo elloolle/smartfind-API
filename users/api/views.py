@@ -23,6 +23,7 @@ class UserSignUpView(TokenObtainPairView):
         user_serializer = UserSerializer(data=request.data)
         user_serializer.is_valid(raise_exception=True)
         user_serializer.save()
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         token_data = serializer.validated_data

@@ -5,36 +5,9 @@ from ..service import get_last_user_subscription
 from django.conf import settings
 from loguru import logger
 from datetime import datetime
-
+from core.models import SubscriptionStatus
 
 User = get_user_model()
-
-
-class SubscriptionSerializer(serializers.ModelSerializer):
-    plan = serializers.SerializerMethodField()
-    expires_date = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Subscription
-        fields = ["id", "status", "plan", "expires_date"]
-
-    def get_product_name(self, instance):
-        try:
-            return instance.stripe_data["items"]["data"][0]["price"]["lookup_key"]
-        except (KeyError, IndexError, TypeError):
-            return None
-
-    def get_plan(self, instance):
-        product_name = self.get_product_name(instance)
-        if not product_name:
-            return None
-        return settings.PRODUCTS[product_name]["plan"]
-
-    def get_expires_date(self, instance):
-        product_name = self.get_product_name(instance)
-        if not product_name:
-            return None
-        return instance.created + settings.PRODUCTS[product_name]["delay"]
 
 
 class SubscriptionProductNameSerializer(serializers.Serializer):

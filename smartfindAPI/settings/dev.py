@@ -21,25 +21,28 @@ DATABASES = {
     }
 }
 
-PRODUCTS = {
-    "pro_month_subscription": {
+DEFAULT_PRODUCTS = [
+    {
+        "name": "pro_month_subscription",
         "plan": "pro",
         "month_price": 100,
         "delay": timedelta(days=30),
     },
-    "default_subscription": {
+    {
+        "name": "default_subscription",
         "plan": "free_plan",
         "month_price": 0,
-        "delay": "never expires",
+        "delay": None,
     },
-}
+]
+DEFAULT_PRODUCT_NAME = "default_subscription"
 TRIAL_PERIOD_DAYS = 14
 DAYS_BEFORE_SUBSCRIPTION_DEACTIVATION = 1
 DEFAULT_TRIAL_PLAN = "pro_month_subscription"
 CHECKOUT_SUCCESS_URL = "http://127.0.0.1:8000"
 CHECKOUT_CANCEL_URL = "http://127.0.0.1:8000"
 PORTAL_SUCCESS_URL = "http://127.0.0.1:8000"
-LOGS_PATH = Path.cwd() / "logs.txt"
+LOGS_PATH = Path.cwd() / "utils" / "logs.txt"
 logger.add(LOGS_PATH)
 
 SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"] = timedelta(days=1000)
@@ -54,5 +57,7 @@ WEBHOOKS_LOGS_PATH = (
     / "first_sample.py"
 )
 WEBHOOKS_EVENT_NAME_TO_LOG = "customer.subscription.created"
-STRIPE_SECRET_KEY = os.getenv("TEST_STRIPE_API_KEY")
+STRIPE_SECRET_KEY = STRIPE_TEST_SECRET_KEY
 STATIC_FILES_PATH = BASE_DIR / Path("static/")
+YOOKASSA_ACCOUNT_ID = os.environ.get("YOOKASSA_ACCOUNT_ID")
+YOOKASSA_SECRET_KEY = os.environ.get("YOOKASSA_SECRET_KEY")

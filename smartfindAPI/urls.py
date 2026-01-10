@@ -10,6 +10,7 @@ urlpatterns = [
                 path("users/", include("users.urls")),
                 path("embeddings/", include("embeddings.urls")),
                 path("payments/", include("subscription_payments.urls")),
+                path("yookassa/", include("yookassa_payments.urls")),
             ]
         ),
     ),

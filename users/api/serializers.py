@@ -1,29 +1,19 @@
 from rest_framework import serializers
-from subscription_payments.service import (
-    get_last_user_subscription,
-    get_default_subscription_data,
-)
 from ..models import User
-from subscription_payments.api.serializers import SubscriptionSerializer
+from core.api.serializers import SubscriptionSerializer
 
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    subscription = SubscriptionSerializer()
 
     class Meta:
         model = User
-        fields = ["id", "username", "password"]
+        fields = ["id", "username", "password", "subscription"]
 
     def create(self, validated_data):
-        return User.objects.create_user(
+        user = User.objects.create_user(
             username=validated_data["username"], password=validated_data["password"]
         )
-
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        subscription = get_last_user_subscription(instance)
-        if not subscription:
-            data["subscription"] = get_default_subscription_data()
-            return data
-        data["subscription"] = SubscriptionSerializer(subscription).data
-        return data
+        SubscriptionSerializer().create({"user": user})
+        return user

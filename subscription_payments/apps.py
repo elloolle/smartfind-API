@@ -7,4 +7,4 @@ class PaymentsConfig(AppConfig):
     name = "subscription_payments"
 
     def ready(self):
-        pass
+        import subscription_payments.signals
