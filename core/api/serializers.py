@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from loguru import logger
 from rest_framework import serializers
@@ -23,8 +25,9 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         user = validated_data["user"]
         default_product = Product.objects.get(name=settings.DEFAULT_PRODUCT_NAME)
         return Subscription.objects.create(
+            id=uuid.uuid4(),
             user=user,
             status=SubscriptionStatus.ACTIVE,
-            start_period=now,
+            start_period=now(),
             product=default_product,
         )

@@ -5,7 +5,7 @@ from core.api.serializers import SubscriptionSerializer
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
-    subscription = SubscriptionSerializer()
+    subscription = SubscriptionSerializer(required=False)
 
     class Meta:
         model = User

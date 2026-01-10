@@ -25,7 +25,9 @@ class Product(models.Model):
 
 class Subscription(models.Model):
     id = models.CharField(max_length=256, primary_key=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="subscription"
+    )
     status = models.CharField(choices=SubscriptionStatus.choices)
     start_period = models.DateTimeField()
     product = models.ForeignKey(

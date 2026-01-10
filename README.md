@@ -16,7 +16,7 @@ stripe trigger checkout.session.completed # отправка запроса на
 ```
 ## Прокинуть вебхуки
 ```bash
-ngrok http 8000
+
 ```
 ## Установить верификацию сигнатуры вебхуков
 ```python
