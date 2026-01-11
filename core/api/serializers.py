@@ -5,7 +5,6 @@ from loguru import logger
 from rest_framework import serializers
 
 from core.models import Subscription, SubscriptionStatus, Product
-from django.utils.timezone import now
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -28,6 +27,5 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             id=uuid.uuid4(),
             user=user,
             status=SubscriptionStatus.ACTIVE,
-            start_period=now(),
             product=default_product,
         )

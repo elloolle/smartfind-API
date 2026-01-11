@@ -6,6 +6,8 @@ from django_celery_beat.models import IntervalSchedule, PeriodicTask
 from yookassa import Configuration, Payment, PaymentMethod
 import json
 from core.models import Product
+from datetime import timedelta
+from core.helpers import now
 
 Configuration.account_id = settings.YOOKASSA_ACCOUNT_ID
 Configuration.secret_key = settings.YOOKASSA_SECRET_KEY
@@ -61,26 +63,41 @@ def get_trial_subscription_payment_link(user_id, subscription_type):
     return payment_method.confirmation.confirmation_url
 
 
-def make_auto_pay_every_30_days(payment_method_id, product):
+def make_auto_pay_every_n_days_after_k_days(payment_method_id, product, n, k):
     interval, _ = IntervalSchedule.objects.get_or_create(
-        every=30,
+        every=n,
         period=IntervalSchedule.DAYS,
     )
+    task_kwargs = json.dumps(
+        {"payment_method_id": payment_method_id, "product_id": product.pk},
+        sort_keys=True,
+    )
     PeriodicTask.objects.update_or_create(
-        name="monthly_job_every_30_days",
+        name=f"monthly_job_every_{n}_days",
         defaults={
             "interval": interval,
             "task": "yookassa_payments.tasks.withdraw_money_for_product",
+            "start_time": now() + timedelta(days=k),
             "enabled": True,
-            "kwargs": json.dumps(
-                {"payment_method_id": payment_method_id, product: product}
-            ),
+            "kwargs": task_kwargs,
         },
+    )
+
+
+def make_auto_pay(payment_method_id, product):
+    make_auto_pay_every_n_days_after_k_days(payment_method_id, product, 30, 0)
+
+
+def make_trial_auto_pay(payment_method_id, product):
+    make_auto_pay_every_n_days_after_k_days(
+        payment_method_id, product, 30, settings.TRIAL_PERIOD_DAYS
     )
 
 
 def decline_auto_pay(payment_method_id):
     PeriodicTask.objects.filter(
         name="monthly_job_every_30_days",
-        kwargs__startswith=json.dumps({"payment_method_id": payment_method_id}),
+        kwargs__startswith=json.dumps(
+            {"payment_method_id": payment_method_id}, sort_keys=True
+        ),
     ).delete()

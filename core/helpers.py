@@ -1,7 +1,5 @@
-from django.conf import settings
-from loguru import logger
-import django
+from django.utils import timezone
 
 
 def now():
-    return django.utils.timezone.now()
+    return timezone.now()

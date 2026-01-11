@@ -4,6 +4,7 @@ from django.conf import settings
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.forms.models import model_to_dict
+from .helpers import now
 
 User = get_user_model()
 
@@ -35,7 +36,7 @@ class Subscription(models.Model):
         User, on_delete=models.SET_NULL, related_name="subscription", null=True
     )
     status = models.CharField(choices=SubscriptionStatus.choices)
-    start_period = models.DateTimeField()
+    start_period = models.DateTimeField(default=now)
     product = models.ForeignKey(
         Product,
         on_delete=models.PROTECT,
