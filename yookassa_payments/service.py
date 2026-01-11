@@ -1,5 +1,6 @@
 from django.conf import settings
 from loguru import logger
+from django.forms.models import model_to_dict
 import uuid
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
 from yookassa import Configuration, Payment, PaymentMethod
@@ -28,7 +29,7 @@ def make_payment(user_id, amount, metadata):
     return payment
 
 
-def make_trial_payment_link(user_id, metadata):
+def make_payment_method(user_id, metadata):
     payment_method = PaymentMethod.create(
         {
             "confirmation": {
@@ -44,15 +45,19 @@ def make_trial_payment_link(user_id, metadata):
 
 def get_subscription_payment_link(user_id, subscription_type):
     product = Product.objects.get(name=subscription_type)
-    metadata = {"user_id": user_id, "product": product}
+    metadata = {"user_id": user_id, "product": product.name}
     payment = make_payment(user_id, product.month_price, metadata)
     return payment.confirmation.confirmation_url
 
 
 def get_trial_subscription_payment_link(user_id, subscription_type):
     product = Product.objects.get(name=subscription_type)
-    metadata = {"user_id": user_id, "product": product, "trial": True}
-    payment_method = make_payment_method(user_id, product.month_price, metadata)
+    metadata = {
+        "user_id": user_id,
+        "product": product.name,
+        "trial": True,
+    }
+    payment_method = make_payment_method(user_id, metadata)
     return payment_method.confirmation.confirmation_url
 
 

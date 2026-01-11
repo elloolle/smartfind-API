@@ -3,6 +3,7 @@ import uuid
 from django.conf import settings
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.forms.models import model_to_dict
 
 User = get_user_model()
 
@@ -21,6 +22,11 @@ class Product(models.Model):
     plan = models.CharField(max_length=64)
     delay = models.DurationField(null=True)
     month_price = models.FloatField()
+
+    def to_dict(self):
+        dict = model_to_dict(self)
+        dict["delay"] = str(dict["delay"])
+        return dict
 
 
 class Subscription(models.Model):
