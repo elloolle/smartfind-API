@@ -16,12 +16,12 @@ class SubscriptionProductNameSerializer(serializers.Serializer):
     def validate(self, data):
         request = self.context.get("request")
         user = request.user
-        subscription = user.subscription
+        subscription = getattr(user, "subscription", None)
         product_name = request.data.get("product_name")
         if (
             not settings.IGNORE_CLONE_SUBSCRIPTIONS
             and subscription
-            and product_name == subscription.name
+            and product_name == subscription.product.name
         ):
             raise serializers.ValidationError("User already subscribed for this plan")
         data["product_name"] = product_name

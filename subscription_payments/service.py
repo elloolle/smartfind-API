@@ -42,7 +42,7 @@ def log_webhooks(request):
     logger.log("TRACE", f"{event_dict!r},")
 
 
-def get_core_sub_from_djstripe_sub(djstripe_sub):
+def get_core_sub_dict_from_djstripe_sub(djstripe_sub):
     id = djstripe_sub.id
     product_name = djstripe_sub.stripe_data["items"]["data"][0]["price"]["lookup_key"]
     user = User.objects.get(customer_id=djstripe_sub.customer.id)
@@ -60,6 +60,10 @@ def get_core_sub_from_djstripe_sub(djstripe_sub):
     status = STRIPE_TO_CORE_STATUS.get(djstripe_sub_status, SubscriptionStatus.UNPAID)
     start_period = djstripe_sub.created
     product = Product.objects.get(name=product_name)
-    return CoreSubscription.objects.create(
-        id=id, user=user, status=status, start_period=start_period, product=product
-    )
+    return {
+        "id": id,
+        "user": user,
+        "status": status,
+        "start_period": start_period,
+        "product": product,
+    }

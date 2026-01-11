@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 
 from core.models import Subscription, SubscriptionStatus
-from .service import get_core_sub_from_djstripe_sub
+from .service import get_core_sub_dict_from_djstripe_sub
 import djstripe
 
 User = get_user_model()
@@ -12,9 +12,11 @@ User = get_user_model()
 
 @receiver(post_save, sender=djstripe.models.Subscription)
 def dublicate_user_subscription(sender, instance, created, **kwargs):
-    core_subscription = get_core_sub_from_djstripe_sub(instance)
-    if core_subscription.status == SubscriptionStatus.ACTIVE:
-        user.subscription = core_subscription
+    new_subscription = get_core_sub_dict_from_djstripe_sub(instance)
+    old_subscription = Subscription.objects.get(user=new_subscription["user"])
+    old_subscription.delete()
+    subscription = Subscription(**new_subscription)
+    subscription.save()
 
 
 @receiver(

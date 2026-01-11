@@ -63,7 +63,7 @@ class TrialSubscriptionViewTests(APITestCase):
         )
         self.assertEqual(
             mock_create_payment_session.call_args.kwargs["product_name"],
-            settings.DEFAULT_TRIAL_PLAN,
+            settings.TRIAL_PRODUCT_NAME,
         )
 
     def test_trial_subscription_forbidden_without_permission(self):

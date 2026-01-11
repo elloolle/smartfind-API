@@ -135,7 +135,7 @@ class TrialSubscriptionView(SubscriptionView):
         user.may_have_trial = True
         user.save()
         return self.create_payment_session(
-            product_name=settings.DEFAULT_TRIAL_PLAN,
+            product_name=settings.TRIAL_PRODUCT_NAME,
             trial_period_days=settings.TRIAL_PERIOD_DAYS,
         )
 

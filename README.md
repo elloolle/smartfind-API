@@ -38,3 +38,8 @@ stripe trigger checkout.session.completed # отправка запроса на
 ```bash
     python manage.py startapp [name of app] --template ".\utils\app_template"                      
 ``` 
+
+## Удалить бд
+```bash
+     docker rm -f  deployment-postgres-1 | docker volume rm deployment_db_data
+```

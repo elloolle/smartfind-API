@@ -2,8 +2,9 @@ from django.conf import settings
 from loguru import logger
 import uuid
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
-from yookassa import Configuration, Payment
+from yookassa import Configuration, Payment, PaymentMethod
 import json
+from core.models import Product
 
 Configuration.account_id = settings.YOOKASSA_ACCOUNT_ID
 Configuration.secret_key = settings.YOOKASSA_SECRET_KEY
@@ -27,15 +28,32 @@ def make_payment(user_id, amount, metadata):
     return payment
 
 
-def get_subscription_payment_link(payment):
+def make_trial_payment_link(user_id, metadata):
+    payment_method = PaymentMethod.create(
+        {
+            "confirmation": {
+                "type": "redirect",
+                "return_url": settings.CHECKOUT_SUCCESS_URL,
+            },
+            "type": "bank_card",
+            "metadata": metadata,
+        }
+    )
+    return payment_method
+
+
+def get_subscription_payment_link(user_id, subscription_type):
+    product = Product.objects.get(name=subscription_type)
+    metadata = {"user_id": user_id, "product": product}
+    payment = make_payment(user_id, product.month_price, metadata)
     return payment.confirmation.confirmation_url
 
 
-def get_subscription_payment(user_id, subscription_type):
-    product = settings.PRODUCTS[subscription_type]
-    metadata = {"user_id": user_id, "product": product}
-    payment = make_payment(user_id, product.month_price, metadata)
-    return payment
+def get_trial_subscription_payment_link(user_id, subscription_type):
+    product = Product.objects.get(name=subscription_type)
+    metadata = {"user_id": user_id, "product": product, "trial": True}
+    payment_method = make_payment_method(user_id, product.month_price, metadata)
+    return payment_method.confirmation.confirmation_url
 
 
 def make_auto_pay_every_30_days(payment_method_id, product):
@@ -56,5 +74,8 @@ def make_auto_pay_every_30_days(payment_method_id, product):
     )
 
 
-def decline_auto_pay_if_enable(payment_method_id):
-    pass
+def decline_auto_pay(payment_method_id):
+    PeriodicTask.objects.filter(
+        name="monthly_job_every_30_days",
+        kwargs__startswith=json.dumps({"payment_method_id": payment_method_id}),
+    ).delete()
