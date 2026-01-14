@@ -73,7 +73,7 @@ def make_auto_pay_every_n_days_after_k_days(payment_method_id, product, n, k):
         sort_keys=True,
     )
     PeriodicTask.objects.update_or_create(
-        name=f"monthly_job_every_{n}_days",
+        name=f"yookassa_payment_job_{payment_method_id}",
         defaults={
             "interval": interval,
             "task": "yookassa_payments.tasks.withdraw_money_for_product",
@@ -85,19 +85,18 @@ def make_auto_pay_every_n_days_after_k_days(payment_method_id, product, n, k):
 
 
 def make_auto_pay(payment_method_id, product):
-    make_auto_pay_every_n_days_after_k_days(payment_method_id, product, 30, 0)
+    make_auto_pay_every_n_days_after_k_days(
+        payment_method_id, product, settings.DAYS_IN_MONTH, 0
+    )
 
 
 def make_trial_auto_pay(payment_method_id, product):
     make_auto_pay_every_n_days_after_k_days(
-        payment_method_id, product, 30, settings.TRIAL_PERIOD_DAYS
+        payment_method_id, product, settings.DAYS_IN_MONTH, settings.TRIAL_PERIOD_DAYS
     )
 
 
 def decline_auto_pay(payment_method_id):
     PeriodicTask.objects.filter(
-        name="monthly_job_every_30_days",
-        kwargs__startswith=json.dumps(
-            {"payment_method_id": payment_method_id}, sort_keys=True
-        ),
+        name=f"yookassa_payment_job_{payment_method_id}",
     ).delete()

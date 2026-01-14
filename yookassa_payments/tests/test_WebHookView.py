@@ -66,7 +66,9 @@ class WebHookViewTests(APITestCase):
             )
 
     def _assert_periodic_task(self, payment_method_id, product_id, trial=False):
-        task = PeriodicTask.objects.get(name="monthly_job_every_30_days")
+        task = PeriodicTask.objects.get(
+            name=f"yookassa_payment_job_{payment_method_id}"
+        )
         self.assertEqual(task.task, "yookassa_payments.tasks.withdraw_money_for_product")
         kwargs = json.loads(task.kwargs)
         self.assertEqual(kwargs["payment_method_id"], payment_method_id)
@@ -93,9 +95,13 @@ class WebHookViewTests(APITestCase):
             payment_method_id=payload["object"]["payment_method"]["id"],
             product_id=subscription.product_id,
         )
-        interval = IntervalSchedule.objects.get(every=30, period=IntervalSchedule.DAYS)
+        interval = IntervalSchedule.objects.get(
+            every=settings.DAYS_IN_MONTH, period=IntervalSchedule.DAYS
+        )
         self.assertEqual(
-            PeriodicTask.objects.get(name="monthly_job_every_30_days").interval_id,
+            PeriodicTask.objects.get(
+                name=f"yookassa_payment_job_{payload['object']['payment_method']['id']}"
+            ).interval_id,
             interval.id,
         )
 
@@ -128,10 +134,10 @@ class WebHookViewTests(APITestCase):
             product=product,
         )
         interval, _ = IntervalSchedule.objects.get_or_create(
-            every=30, period=IntervalSchedule.DAYS
+            every=settings.DAYS_IN_MONTH, period=IntervalSchedule.DAYS
         )
         PeriodicTask.objects.create(
-            name="monthly_job_every_30_days",
+            name=f"yookassa_payment_job_{payment_method_id}",
             interval=interval,
             task="yookassa_payments.tasks.withdraw_money_for_product",
             start_time=timezone.now(),
@@ -150,5 +156,7 @@ class WebHookViewTests(APITestCase):
         subscription.refresh_from_db()
         self.assertEqual(subscription.status, SubscriptionStatus.UNPAID)
         self.assertFalse(
-            PeriodicTask.objects.filter(name="monthly_job_every_30_days").exists()
+            PeriodicTask.objects.filter(
+                name=f"yookassa_payment_job_{payment_method_id}"
+            ).exists()
         )
