@@ -1,5 +1,11 @@
-[tool.mypy]
-python_version = "3.10"
-ignore_missing_imports = true
-strict_optional = true
-warn_unused_ignores = true
+[tool.ruff]
+
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F"]
+ignore = ["F401"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/migrations/*.py" = ["E501"]
+"**/settings/*.py" = ["E501", "F403", "F405"]

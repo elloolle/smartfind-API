@@ -48,3 +48,7 @@ ngrok http 8000
 ```bash
      docker rm -f  deployment-postgres-1 | docker volume rm deployment_db_data
 ```
+## Запуск проверки линтера ruff
+```bash
+    ruff check .
+```

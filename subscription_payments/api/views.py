@@ -185,7 +185,7 @@ class PaymentSession(APIView):
             payment_session = stripe.checkout.Session.retrieve(id=payment_session_id)
         except Exception as e:
             return Response(
-                {"error": f"payment session don't exist", "stripe_error": str(e)},
+                {"error": "payment session don't exist", "stripe_error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         return Response({"payment_session_status": payment_session.status})

@@ -25,6 +25,7 @@ from ..service import (
 from .serializers import PaymentSerializer, PaymentMethodSerializer
 from ..models import Payment, PaymentMethod
 from rest_framework import mixins, viewsets
+from core.helpers import now
 
 User = get_user_model()
 
@@ -65,55 +66,55 @@ class WebHookView(APIView):
         make_trial_auto_pay(self.payment_method["id"], self.product)
 
     def process_success_payment(self, obj):
+        metadata = obj["metadata"]
         try:
-            product = Product.objects.get(name=self.metadata["product"])
+            product = Product.objects.get(name=metadata["product"])
         except Product.DoesNotExist:
-            logger.exception(f"Product not found: {self.metadata['product']}")
+            logger.exception(f"Product not found: {metadata['product']}")
             raise Exception(
                 Response("product not found", status=status.HTTP_404_NOT_FOUND)
             )
         sub = Subscription.objects.filter(user=self.user).first()
         self.product = product
-        self.payment_method = obj["payment_method"]
-        if self.metadata.get("trial"):
+        if metadata.get("trial"):
             self.process_trial_subscription(sub)
         else:
             self.process_subscription(sub)
 
     def process_canceled_payment(self, obj):
-        payment_method_id = obj["payment_method"]["id"]
+        payment_method_id = self.payment_method["id"]
         subscription = Subscription.objects.get(id=payment_method_id)
         subscription.status = SubscriptionStatus.UNPAID
         subscription.save()
-        decline_auto_pay(payment_method["id"])
+        decline_auto_pay(payment_method_id)
 
-    def log_payment_method_into_db(self, payment_method):
-        status = YOOKASSA_TO_CORE_STATUS[self.event_type]
-        details = {"type": payment_method["type"]}
+    def log_payment_method_into_db(self):
+        status = YOOKASSA_TO_CORE_STATUS[self.event_status]
+        details = {"type": self.payment_method["type"]}
 
-        if payment_method["type"] == "yoo_money":
-            details["number"] = payment_method["account_number"]
-        elif payment_method["type"] == "bank_card":
-            card = payment_method["card"]
+        if self.payment_method["type"] == "yoo_money":
+            details["number"] = self.payment_method["account_number"]
+        elif self.payment_method["type"] == "bank_card":
+            card = self.payment_method["card"]
             details["number"] = str(card["first6"] + 6 * "*" + card["last4"])
             details["expire_date"] = (
                 f"{card["expiry_month"]}/{card["expiry_year"][2:4]}"
             )
         PaymentMethod.objects.update_or_create(
-            id=payment_method["id"],
-            defaults={"user": self.request.user, "status": status, "details": details},
+            id=self.payment_method["id"],
+            defaults={"user": self.user, "status": status, "details": details},
         )
 
     def log_payment_into_db(self, payment):
-        status = YOOKASSA_TO_CORE_STATUS[self.event_type]
+        status = YOOKASSA_TO_CORE_STATUS[self.event_status]
         Payment.objects.update_or_create(
             id=payment["id"],
             defaults={
-                "user": self.request.user,
+                "user": self.user,
                 "status": status,
-                "period_start": payment["captured_at"],
-                "amount": payment["amount"],
-                "income_amount": payment["income_amount"],
+                "period_start": now(),
+                "amount": payment["amount"]["value"],
+                "income_amount": payment["income_amount"]["value"],
             },
         )
 
@@ -127,8 +128,10 @@ class WebHookView(APIView):
             logger.error(e)
             raise Exception("Webhook payment missing user")
         self.user = user
+        self.payment_method = obj["payment_method"]
+        self.event_status = self.event_type.removeprefix("payment.")
         self.log_payment_into_db(obj)
-        self.log_payment_method_into_db(obj)
+        self.log_payment_method_into_db()
         if self.event_type in ("payment.succeeded", "payment.waiting_for_capture"):
             self.process_success_payment(obj)
         if self.event_type == "payment.canceled":
@@ -136,13 +139,14 @@ class WebHookView(APIView):
 
     def post(self, request, *args, **kwargs):
         logger.info(f"webhook request: {request.data}")
+        event = request.data
         try:
-            WebhookNotification(request.data)
+            WebhookNotification(event)
         except Exception as e:
             logger.exception(f"Webhook notification failed: {e}")
         self.event_type = event["event"]
         if self.event_type.startswith("payment."):
-            self.process_payment_event(request.data)
+            self.process_payment_event(event)
         return Response(status=status.HTTP_200_OK)
 
 

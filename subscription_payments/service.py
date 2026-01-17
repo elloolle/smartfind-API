@@ -24,24 +24,6 @@ def get_last_user_subscription(user):
     return subscriptions.order_by("-created").first()
 
 
-def log_webhooks(request):
-    if not settings.IS_WEBHOOK_LOGGING_ON:
-        return
-    logs_path = settings.WEBHOOKS_LOGS_PATH
-    event_name = settings.WEBHOOKS_EVENT_NAME_TO_LOG
-
-    event = get_event(request)
-    if event["type"] != event_name:
-        return
-    event_dict = event.to_dict_recursive()
-    logger.add(
-        settings.WEBHOOKS_LOGS_PATH,
-        format="{message}",  # <-- никаких INFO, времени, уровня — только сообщение!
-        level="TRACE",  # позволяет логировать .log(...)
-    )
-    logger.log("TRACE", f"{event_dict!r},")
-
-
 def get_core_sub_dict_from_djstripe_sub(djstripe_sub):
     id = djstripe_sub.id
     product_name = djstripe_sub.stripe_data["items"]["data"][0]["price"]["lookup_key"]

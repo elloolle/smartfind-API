@@ -53,7 +53,7 @@ class AbstractPayment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="payment")
     status = models.CharField(choices=PaymentStatus.choices)
     period_start = models.DateTimeField()
-    amount = models.DateTimeField()
+    amount = models.DecimalField(decimal_places=2, max_digits=10)
 
     class Meta:
         abstract = True
