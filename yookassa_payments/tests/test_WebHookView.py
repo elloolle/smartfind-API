@@ -1,5 +1,6 @@
 from copy import deepcopy
 from datetime import timedelta
+from decimal import Decimal
 import json
 
 from django.conf import settings
@@ -9,7 +10,16 @@ from django_celery_beat.models import IntervalSchedule, PeriodicTask
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from core.models import Product, Subscription, SubscriptionStatus
+from unittest.mock import patch
+
+from core.models import (
+    PaymentMethodStatus,
+    PaymentStatus,
+    Product,
+    Subscription,
+    SubscriptionStatus,
+)
+from yookassa_payments.models import Payment, PaymentMethod
 from ..service import PAYMENT_JOB_NAME
 
 User = get_user_model()
@@ -156,4 +166,95 @@ class WebHookViewTests(APITestCase):
             PeriodicTask.objects.filter(
                 name=f"{PAYMENT_JOB_NAME}_{payment_method_id}"
             ).exists()
+        )
+
+    @patch("yookassa_payments.api.views.now")
+    def test_webhook_logs_payment_and_method_for_yoo_money(self, mock_now):
+        fixed_time = timezone.now()
+        mock_now.return_value = fixed_time
+        payload = deepcopy(self.base_payload)
+
+        response = self.client.post(self.url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        payment = Payment.objects.get(id=payload["object"]["id"])
+        self.assertEqual(payment.user, self.user)
+        self.assertEqual(payment.status, PaymentStatus.PAID)
+        self.assertEqual(payment.period_start, fixed_time)
+        self.assertEqual(payment.amount, Decimal(payload["object"]["amount"]["value"]))
+        self.assertEqual(
+            payment.income_amount,
+            Decimal(payload["object"]["income_amount"]["value"]),
+        )
+        method = PaymentMethod.objects.get(id=payload["object"]["payment_method"]["id"])
+        self.assertEqual(method.user, self.user)
+        self.assertEqual(method.status, PaymentMethodStatus.ACTIVE)
+        self.assertEqual(
+            method.details,
+            {
+                "type": "yoo_money",
+                "number": payload["object"]["payment_method"]["account_number"],
+            },
+        )
+
+    def test_webhook_logs_bank_card_payment_method_details(self):
+        payload = deepcopy(self.base_payload)
+        payload["object"]["payment_method"] = {
+            "type": "bank_card",
+            "id": "card_method",
+            "card": {
+                "first6": "411111",
+                "last4": "1111",
+                "expiry_year": "2028",
+                "expiry_month": "09",
+            },
+        }
+
+        response = self.client.post(self.url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        method = PaymentMethod.objects.get(id="card_method")
+        self.assertEqual(
+            method.details,
+            {
+                "type": "bank_card",
+                "number": "4111 11** **** 1111",
+                "expire_date": "09/28",
+            },
+        )
+
+    def test_webhook_updates_existing_payment_and_method(self):
+        payload = deepcopy(self.base_payload)
+        Payment.objects.create(
+            id=payload["object"]["id"],
+            user=self.user,
+            status=PaymentStatus.UNPAID,
+            period_start=timezone.now(),
+            amount="10.00",
+            income_amount="9.00",
+        )
+        PaymentMethod.objects.create(
+            id=payload["object"]["payment_method"]["id"],
+            user=self.user,
+            status=PaymentMethodStatus.CANCELED,
+            details={"type": "yoo_money", "number": "old"},
+        )
+        payload["object"]["amount"]["value"] = "250.00"
+        payload["object"]["income_amount"]["value"] = "245.00"
+        payload["object"]["payment_method"]["account_number"] = "410011000000000"
+
+        response = self.client.post(self.url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        updated_payment = Payment.objects.get(id=payload["object"]["id"])
+        self.assertEqual(updated_payment.status, PaymentStatus.PAID)
+        self.assertEqual(updated_payment.amount, Decimal("250.00"))
+        self.assertEqual(updated_payment.income_amount, Decimal("245.00"))
+        updated_method = PaymentMethod.objects.get(
+            id=payload["object"]["payment_method"]["id"]
+        )
+        self.assertEqual(updated_method.status, PaymentMethodStatus.ACTIVE)
+        self.assertEqual(
+            updated_method.details,
+            {"type": "yoo_money", "number": "410011000000000"},
         )

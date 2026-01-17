@@ -2,7 +2,7 @@ from django.conf import settings
 from numpy.f2py.auxfuncs import throw_error
 from rest_framework.response import Response
 from rest_framework import status
-
+from ..helpers import make_anonymous_card
 from loguru import logger
 from django.contrib.auth import get_user_model
 from rest_framework.permissions import IsAuthenticated
@@ -17,10 +17,10 @@ from core.models import (
 )
 from ..service import (
     get_subscription_payment_link,
-    decline_auto_pay,
     get_trial_subscription_payment_link,
     make_auto_pay,
     make_trial_auto_pay,
+    decline_subscription,
 )
 from .serializers import PaymentSerializer, PaymentMethodSerializer
 from ..models import Payment, PaymentMethod
@@ -84,9 +84,7 @@ class WebHookView(APIView):
     def process_canceled_payment(self, obj):
         payment_method_id = self.payment_method["id"]
         subscription = Subscription.objects.get(id=payment_method_id)
-        subscription.status = SubscriptionStatus.UNPAID
-        subscription.save()
-        decline_auto_pay(payment_method_id)
+        decline_subscription(subscription)
 
     def log_payment_method_into_db(self):
         status = YOOKASSA_TO_CORE_STATUS[self.event_status]
@@ -96,10 +94,12 @@ class WebHookView(APIView):
             details["number"] = self.payment_method["account_number"]
         elif self.payment_method["type"] == "bank_card":
             card = self.payment_method["card"]
-            details["number"] = str(card["first6"] + 6 * "*" + card["last4"])
+            details["number"] = make_anonymous_card(card["first6"], card["last4"])
             details["expire_date"] = (
                 f"{card["expiry_month"]}/{card["expiry_year"][2:4]}"
             )
+        else:
+            logger.exception(f"Payment method not supported: {self.request.data}")
         PaymentMethod.objects.update_or_create(
             id=self.payment_method["id"],
             defaults={"user": self.user, "status": status, "details": details},
@@ -159,8 +159,8 @@ class SubscriptionView(APIView):
         return Response(get_subscription_payment_link(user_id, product_name))
 
     def delete(self, request, *args, **kwargs):
-        # TODO
-        pass
+        subscription = Subscription.objects.get(user=request.user)
+        decline_subscription(subscription)
 
 
 class TrialSubscriptionView(APIView):
@@ -180,6 +180,7 @@ class PaymentMethodViewSet(
     permission_classes = [IsAuthenticated]
     serializer_class = PaymentMethodSerializer
 
+    # TODO добавить возможность удаления paymentMethod
     def get_queryset(self):
         return PaymentMethod.objects.filter(user=self.request.user)
 

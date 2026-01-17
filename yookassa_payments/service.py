@@ -5,7 +5,7 @@ import uuid
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
 from yookassa import Configuration, Payment, PaymentMethod
 import json
-from core.models import Product
+from core.models import Product, SubscriptionStatus
 from datetime import timedelta
 from core.helpers import now
 
@@ -102,3 +102,9 @@ def decline_auto_pay(payment_method_id):
     PeriodicTask.objects.filter(
         name=f"{PAYMENT_JOB_NAME}_{payment_method_id}",
     ).delete()
+
+
+def decline_subscription(subscription):
+    subscription.status = SubscriptionStatus.UNPAID
+    subscription.save()
+    decline_auto_pay(subscription.id)

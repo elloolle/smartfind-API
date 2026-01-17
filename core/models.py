@@ -37,6 +37,9 @@ class Subscription(models.Model):
     )
     status = models.CharField(choices=SubscriptionStatus.choices)
     start_period = models.DateTimeField(default=now)
+    # end_period = models.DateTimeField()
+    # TODO сделать end_period и его обновление во всех payments и
+    # изменение статуса в зависимости от того кончился ли срок подписки
     product = models.ForeignKey(
         Product,
         on_delete=models.PROTECT,
