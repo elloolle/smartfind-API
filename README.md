@@ -15,8 +15,13 @@ stripe listen --forward-to localhost:8000/api/payments/webhook/  # актива�
 stripe trigger checkout.session.completed # отправка запроса на вебхук 
 ```
 ## Прокинуть вебхуки
+# clo
 ```bash
-
+clo publish http 8000
+```
+# ngrok
+```bash
+ngrok http 8000
 ```
 ## Установить верификацию сигнатуры вебхуков
 ```python

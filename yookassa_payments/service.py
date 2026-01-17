@@ -12,6 +12,8 @@ from core.helpers import now
 Configuration.account_id = settings.YOOKASSA_ACCOUNT_ID
 Configuration.secret_key = settings.YOOKASSA_SECRET_KEY
 
+PAYMENT_JOB_NAME = "yookassa_payment_job"
+
 
 def make_payment(user_id, amount, metadata):
     payment = Payment.create(
@@ -73,7 +75,7 @@ def make_auto_pay_every_n_days_after_k_days(payment_method_id, product, n, k):
         sort_keys=True,
     )
     PeriodicTask.objects.update_or_create(
-        name=f"yookassa_payment_job_{payment_method_id}",
+        name=f"{PAYMENT_JOB_NAME}_{payment_method_id}",
         defaults={
             "interval": interval,
             "task": "yookassa_payments.tasks.withdraw_money_for_product",
@@ -98,5 +100,5 @@ def make_trial_auto_pay(payment_method_id, product):
 
 def decline_auto_pay(payment_method_id):
     PeriodicTask.objects.filter(
-        name=f"yookassa_payment_job_{payment_method_id}",
+        name=f"{PAYMENT_JOB_NAME}_{payment_method_id}",
     ).delete()

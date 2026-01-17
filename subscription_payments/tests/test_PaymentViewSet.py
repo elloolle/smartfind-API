@@ -39,13 +39,13 @@ class PaymentViewSetTests(APITestCase):
         self.user.save(update_fields=["customer_id"])
         return customer
 
-    def _create_invoice(self, invoice_id, amount_due, period_start, status="paid"):
+    def _create_invoice(self, invoice_id, amount, period_start, status="paid"):
         stripe_data = {
             "id": invoice_id,
             "customer": self.customer.id,
             "status": status,
             "period_start": period_start,
-            "amount_due": amount_due,
+            "amount_due": amount,
         }
         return Invoice.objects.create(
             id=invoice_id,
@@ -70,11 +70,11 @@ class PaymentViewSetTests(APITestCase):
             datetime(2025, 2, 1, tzinfo=dt_timezone.utc).timestamp()
         )
         first_invoice = self._create_invoice(
-            "inv_first", amount_due=5000, period_start=first_period_start, status="paid"
+            "inv_first", amount=5000, period_start=first_period_start, status="paid"
         )
         second_invoice = self._create_invoice(
             "inv_second",
-            amount_due=1234,
+            amount=1234,
             period_start=second_period_start,
             status="draft",
         )
@@ -89,13 +89,13 @@ class PaymentViewSetTests(APITestCase):
                     "djstripe_id": first_invoice.djstripe_id,
                     "status": "paid",
                     "period_start": datetime.utcfromtimestamp(first_period_start),
-                    "amount_due": 50.0,
+                    "amount": 50.0,
                 },
                 {
                     "djstripe_id": second_invoice.djstripe_id,
                     "status": "draft",
                     "period_start": datetime.utcfromtimestamp(second_period_start),
-                    "amount_due": 12.34,
+                    "amount": 12.34,
                 },
             ],
         )

@@ -9,15 +9,6 @@ from .helpers import now
 User = get_user_model()
 
 
-class SubscriptionStatus(models.TextChoices):
-    ACTIVE = "active", "Active"
-    UNPAID = "unpaid", "Unpaid"
-    PAUSED = (
-        "paused",
-        "Paused",
-    )  # если триал версия закончилась, а пользователь не оплатил
-
-
 class Product(models.Model):
     name = models.CharField(max_length=256, unique=True, primary_key=True)
     plan = models.CharField(max_length=64)
@@ -28,6 +19,15 @@ class Product(models.Model):
         dict = model_to_dict(self)
         dict["delay"] = str(dict["delay"])
         return dict
+
+
+class SubscriptionStatus(models.TextChoices):
+    ACTIVE = "active", "Active"
+    UNPAID = "unpaid", "Unpaid"
+    PAUSED = (
+        "paused",
+        "Paused",
+    )  # если триал версия закончилась, а пользователь не оплатил
 
 
 class Subscription(models.Model):
@@ -41,3 +41,36 @@ class Subscription(models.Model):
         Product,
         on_delete=models.PROTECT,
     )
+
+
+class PaymentStatus(models.TextChoices):
+    PAID = "paid", "Paid"
+    UNPAID = "unpaid", "Unpaid"
+
+
+class AbstractPayment(models.Model):
+    id = models.CharField(max_length=256, primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="payment")
+    status = models.CharField(choices=PaymentStatus.choices)
+    period_start = models.DateTimeField()
+    amount = models.DateTimeField()
+
+    class Meta:
+        abstract = True
+
+
+class PaymentMethodStatus(models.TextChoices):
+    ACTIVE = "paid", "Paid"
+    CANCELED = "canceled", "Canceled"
+
+
+class AbstractPaymentMethod(models.Model):
+    id = models.CharField(max_length=256, primary_key=True)
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="payment_method"
+    )
+    status = models.CharField(choices=PaymentMethodStatus.choices)
+    details = models.JSONField(default=dict)
+
+    class Meta:
+        abstract = True

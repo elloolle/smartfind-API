@@ -60,11 +60,11 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
 class InvoiceSerializer(serializers.ModelSerializer):
     status = serializers.SerializerMethodField()
     period_start = serializers.SerializerMethodField()
-    amount_due = serializers.SerializerMethodField()
+    amount = serializers.SerializerMethodField()
 
     class Meta:
         model = Invoice
-        fields = ["djstripe_id", "status", "period_start", "amount_due"]
+        fields = ["djstripe_id", "status", "period_start", "amount"]
         ordering = ["period_start"]
 
     def get_status(self, obj):
@@ -74,6 +74,6 @@ class InvoiceSerializer(serializers.ModelSerializer):
         period_start_unix = obj.stripe_data["period_start"]
         return datetime.utcfromtimestamp(period_start_unix)
 
-    def get_amount_due(self, obj):
-        amount_due = obj.stripe_data["amount_due"]
-        return amount_due / 100
+    def get_amount(self, obj):
+        amount = obj.stripe_data["amount_due"]
+        return amount / 100
