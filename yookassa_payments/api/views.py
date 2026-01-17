@@ -37,7 +37,8 @@ YOOKASSA_TO_CORE_STATUS = {
 
 
 class WebHookView(APIView):
-    def process_subscription(self, sub):
+    def process_subscription(self):
+        sub = self.sub
         if (
             not sub
             or sub.status != SubscriptionStatus.ACTIVE
@@ -46,64 +47,62 @@ class WebHookView(APIView):
             if sub:
                 sub.delete()
             Subscription.objects.create(
-                id=self.payment_method["id"],
+                id=self.payment_method.id,
                 user=self.user,
                 status=SubscriptionStatus.ACTIVE,
                 product=self.product,
             )
-            make_auto_pay(self.payment_method["id"], self.product)
+            make_auto_pay(self.payment_method, self.product)
 
-    def process_trial_subscription(self, sub):
-        sub = Subscription.objects.filter(user=self.user).first()
-        if sub:
-            sub.delete()
+    def process_trial_subscription(self):
+        if self.sub:
+            self.sub.delete()
         Subscription.objects.create(
-            id=self.payment_method["id"],
+            id=self.payment_method.id,
             user=self.user,
             status=SubscriptionStatus.ACTIVE,
             product=self.product,
         )
-        make_trial_auto_pay(self.payment_method["id"], self.product)
+        make_trial_auto_pay(self.payment_method, self.product)
 
     def process_success_payment(self, obj):
         metadata = obj["metadata"]
-        try:
-            product = Product.objects.get(name=metadata["product"])
-        except Product.DoesNotExist:
+        if metadata.get("autopay"):
+            return
+        product = Product.objects.filter(name=metadata["product"]).first()
+        if not product:
             logger.exception(f"Product not found: {metadata['product']}")
-            raise Exception(
-                Response("product not found", status=status.HTTP_404_NOT_FOUND)
-            )
-        sub = Subscription.objects.filter(user=self.user).first()
+            return
         self.product = product
         if metadata.get("trial"):
-            self.process_trial_subscription(sub)
+            self.process_trial_subscription()
         else:
-            self.process_subscription(sub)
+            self.process_subscription()
 
     def process_canceled_payment(self, obj):
-        payment_method_id = self.payment_method["id"]
-        subscription = Subscription.objects.get(id=payment_method_id)
-        decline_subscription(subscription)
+        if not self.sub:
+            return
+        decline_subscription(self.sub)
 
-    def log_payment_method_into_db(self):
+    def log_payment_method_into_db(self, payment_method):
         status = YOOKASSA_TO_CORE_STATUS[self.event_status]
-        details = {"type": self.payment_method["type"]}
+        details = {"type": payment_method["type"]}
 
-        if self.payment_method["type"] == "yoo_money":
-            details["number"] = self.payment_method["account_number"]
-        elif self.payment_method["type"] == "bank_card":
-            card = self.payment_method["card"]
+        if payment_method["type"] == "yoo_money":
+            details["number"] = payment_method["account_number"]
+        elif payment_method["type"] == "bank_card":
+            card = payment_method["card"]
             details["number"] = make_anonymous_card(card["first6"], card["last4"])
             details["expire_date"] = (
                 f"{card["expiry_month"]}/{card["expiry_year"][2:4]}"
             )
         else:
             logger.exception(f"Payment method not supported: {self.request.data}")
-        PaymentMethod.objects.update_or_create(
-            id=self.payment_method["id"],
+        payment_method_obj, _ = PaymentMethod.objects.update_or_create(
+            id=payment_method["id"],
             defaults={"user": self.user, "status": status, "details": details},
         )
+        self.payment_method = payment_method_obj
 
     def log_payment_into_db(self, payment):
         status = YOOKASSA_TO_CORE_STATUS[self.event_status]
@@ -122,16 +121,15 @@ class WebHookView(APIView):
         obj = event["object"]
         metadata = obj["metadata"]
         user_id = metadata.get("user_id")
-        try:
-            user = User.objects.get(id=user_id)
-        except Exception as e:
-            logger.error(e)
-            raise Exception("Webhook payment missing user")
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            logger.exception(f"User not found: {user_id}")
         self.user = user
-        self.payment_method = obj["payment_method"]
+        self.sub = Subscription.objects.filter(user=self.user).first()
         self.event_status = self.event_type.removeprefix("payment.")
+
         self.log_payment_into_db(obj)
-        self.log_payment_method_into_db()
+        self.log_payment_method_into_db(obj["payment_method"])
         if self.event_type in ("payment.succeeded", "payment.waiting_for_capture"):
             self.process_success_payment(obj)
         if self.event_type == "payment.canceled":

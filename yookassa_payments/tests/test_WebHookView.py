@@ -76,14 +76,15 @@ class WebHookViewTests(APITestCase):
                 },
             )
 
-    def _assert_periodic_task(self, payment_method_id, product_id, trial=False):
+    def _assert_periodic_task(self, payment_method_id, amount, user_id, trial=False):
         task = PeriodicTask.objects.get(name=f"{PAYMENT_JOB_NAME}_{payment_method_id}")
         self.assertEqual(
             task.task, "yookassa_payments.tasks.withdraw_money_for_product"
         )
         kwargs = json.loads(task.kwargs)
         self.assertEqual(kwargs["payment_method_id"], payment_method_id)
-        self.assertEqual(kwargs["product_id"], product_id)
+        self.assertEqual(kwargs["amount"], amount)
+        self.assertEqual(kwargs["metadata"], {"user_id": user_id, "auto_pay": True})
         if trial:
             expected_date = (
                 timezone.now() + timedelta(days=settings.TRIAL_PERIOD_DAYS)
@@ -102,7 +103,8 @@ class WebHookViewTests(APITestCase):
         self.assertEqual(subscription.id, payload["object"]["payment_method"]["id"])
         self._assert_periodic_task(
             payment_method_id=payload["object"]["payment_method"]["id"],
-            product_id=subscription.product_id,
+            amount=subscription.product.month_price,
+            user_id=self.user.id,
         )
         interval = IntervalSchedule.objects.get(
             every=settings.DAYS_IN_MONTH, period=IntervalSchedule.DAYS
@@ -127,7 +129,8 @@ class WebHookViewTests(APITestCase):
         self.assertEqual(subscription.id, payload["object"]["payment_method"]["id"])
         self._assert_periodic_task(
             payment_method_id=payload["object"]["payment_method"]["id"],
-            product_id=subscription.product_id,
+            amount=subscription.product.month_price,
+            user_id=self.user.id,
             trial=True,
         )
 

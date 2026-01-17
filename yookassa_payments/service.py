@@ -8,6 +8,7 @@ import json
 from core.models import Product, SubscriptionStatus
 from datetime import timedelta
 from core.helpers import now
+from functools import partial
 
 Configuration.account_id = settings.YOOKASSA_ACCOUNT_ID
 Configuration.secret_key = settings.YOOKASSA_SECRET_KEY
@@ -15,7 +16,7 @@ Configuration.secret_key = settings.YOOKASSA_SECRET_KEY
 PAYMENT_JOB_NAME = "yookassa_payment_job"
 
 
-def make_payment(user_id, amount, metadata):
+def make_payment(amount, metadata):
     payment = Payment.create(
         {
             "amount": {"value": amount, "currency": "RUB"},
@@ -33,7 +34,7 @@ def make_payment(user_id, amount, metadata):
     return payment
 
 
-def make_payment_method(user_id, metadata):
+def make_payment_method(metadata):
     payment_method = PaymentMethod.create(
         {
             "confirmation": {
@@ -50,7 +51,7 @@ def make_payment_method(user_id, metadata):
 def get_subscription_payment_link(user_id, subscription_type):
     product = Product.objects.get(name=subscription_type)
     metadata = {"user_id": user_id, "product": product.name}
-    payment = make_payment(user_id, product.month_price, metadata)
+    payment = make_payment(product.month_price, metadata)
     return payment.confirmation.confirmation_url
 
 
@@ -61,21 +62,26 @@ def get_trial_subscription_payment_link(user_id, subscription_type):
         "product": product.name,
         "trial": True,
     }
-    payment_method = make_payment_method(user_id, metadata)
+    payment_method = make_payment_method(metadata)
     return payment_method.confirmation.confirmation_url
 
 
-def make_auto_pay_every_n_days_after_k_days(payment_method_id, product, n, k):
+def make_auto_pay_every_n_days_after_k_days(payment_method, product, n, k):
+    metadata = {"user_id": payment_method.user.id, "auto_pay": True}
+    task_kwargs = json.dumps(
+        {
+            "payment_method_id": payment_method.id,
+            "amount": product.month_price,
+            "metadata": metadata,
+        },
+        sort_keys=True,
+    )
     interval, _ = IntervalSchedule.objects.get_or_create(
         every=n,
         period=IntervalSchedule.DAYS,
     )
-    task_kwargs = json.dumps(
-        {"payment_method_id": payment_method_id, "product_id": product.pk},
-        sort_keys=True,
-    )
     PeriodicTask.objects.update_or_create(
-        name=f"{PAYMENT_JOB_NAME}_{payment_method_id}",
+        name=f"{PAYMENT_JOB_NAME}_{payment_method.id}",
         defaults={
             "interval": interval,
             "task": "yookassa_payments.tasks.withdraw_money_for_product",
@@ -86,16 +92,15 @@ def make_auto_pay_every_n_days_after_k_days(payment_method_id, product, n, k):
     )
 
 
-def make_auto_pay(payment_method_id, product):
-    make_auto_pay_every_n_days_after_k_days(
-        payment_method_id, product, settings.DAYS_IN_MONTH, 0
-    )
+make_auto_pay = partial(
+    make_auto_pay_every_n_days_after_k_days, n=settings.DAYS_IN_MONTH, k=0
+)
 
-
-def make_trial_auto_pay(payment_method_id, product):
-    make_auto_pay_every_n_days_after_k_days(
-        payment_method_id, product, settings.DAYS_IN_MONTH, settings.TRIAL_PERIOD_DAYS
-    )
+make_trial_auto_pay = partial(
+    make_auto_pay_every_n_days_after_k_days,
+    n=settings.DAYS_IN_MONTH,
+    k=settings.TRIAL_PERIOD_DAYS,
+)
 
 
 def decline_auto_pay(payment_method_id):
