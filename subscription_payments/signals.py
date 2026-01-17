@@ -20,26 +20,3 @@ def dublicate_user_subscription(sender, instance, created, **kwargs):
         old_subscription.delete()
     subscription = Subscription(**new_subscription)
     subscription.save()
-
-
-@receiver(
-    post_migrate, dispatch_uid="subscription_payments_set_djstripe_webhook_secret"
-)
-def set_djstripe_webhook_secret(sender, **kwargs):
-    if getattr(sender, "name", None) != "djstripe":
-        return
-    raw = getattr(settings, "DJSTRIPE_WEBHOOK_SECRET", "")
-    if not raw:
-        return
-    try:
-        from djstripe.models import WebhookEndpoint
-
-        endpoint = WebhookEndpoint.objects.first()
-    except Exception:
-        return
-    if not endpoint:
-        return
-    if endpoint.secret == raw:
-        return
-    endpoint.secret = raw
-    endpoint.save(update_fields=["secret"])

@@ -23,23 +23,13 @@ clo publish http 8000
 ```bash
 ngrok http 8000
 ```
-## Установить верификацию сигнатуры вебхуков
-```python
- from djstripe.models import WebhookEndpoint
- 
- raw = settings.DJSTRIPE_WEBHOOK_SECRET
- try:
-     endpoints = WebhookEndpoint.objects.all()
- except Exception:
-     endpoints = None
- if not raw or not endpoints:
-     return
- endpoint = endpoints[0]
- endpoint.secret = raw
- endpoint.save()
-```
+## Подключение вебхуков
+1. Создать через админку новый api_key со значением STRIPE_API_KEY.
+2. Создать через админку новый webhook endpoint с base_url, на который stripe будет напрямую присылать события
+3. В stripe поставить url для приема вебхуков, который стал названием созданного webhook endpoint
+4. python ```python manage.py sync_djstripe_webhook_secret```
 
-## Создание нового приложения
+## Создание нового шаблонного приложения
 ```bash
     python manage.py startapp [name of app] --template ".\utils\app_template"                      
 ``` 

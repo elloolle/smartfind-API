@@ -48,16 +48,10 @@ logger.add(LOGS_PATH)
 SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"] = timedelta(days=1000)
 
 IGNORE_CLONE_SUBSCRIPTIONS = True
-IS_WEBHOOK_LOGGING_ON = True
-WEBHOOKS_LOGS_PATH = (
-    Path.cwd()
-    / "subscription_payments"
-    / "tests"
-    / "webhook_test_events"
-    / "first_sample.py"
-)
-WEBHOOKS_EVENT_NAME_TO_LOG = "customer.subscription.created"
-STRIPE_SECRET_KEY = STRIPE_TEST_SECRET_KEY
+
+STRIPE_SECRET_KEY = os.environ["TEST_STRIPE_API_KEY"]
+WEBHOOK_SECRET = os.environ["TEST_STRIPE_WEBHOOK_KEY"]
+
 STATIC_FILES_PATH = BASE_DIR / Path("static/")
 YOOKASSA_ACCOUNT_ID = os.environ.get("YOOKASSA_ACCOUNT_ID")
 YOOKASSA_SECRET_KEY = os.environ.get("YOOKASSA_SECRET_KEY")

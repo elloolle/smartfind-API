@@ -172,11 +172,5 @@ EMBEDDING_MODELS = {
         "max_dimension": 1024,
     },
 }
-# Ключи для библиотеки dj stripe
-STRIPE_LIVE_SECRET_KEY = os.environ["LIVE_STRIPE_API_KEY"]
-STRIPE_TEST_SECRET_KEY = os.environ["TEST_STRIPE_API_KEY"]
-STRIPE_LIVE_MODE = False
-
 DJSTRIPE_FOREIGN_KEY_TO_FIELD = "id"
-DJSTRIPE_WEBHOOK_SECRET = os.environ["TEST_STRIPE_WEBHOOK_KEY"]
 DAYS_IN_MONTH = 30
