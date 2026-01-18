@@ -24,7 +24,7 @@ class PaymentMethodViewSetTests(APITestCase):
         )
         token = str(RefreshToken.for_user(self.user).access_token)
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
-        self.url = "/api/yookassa/method/"
+        self.url = "/api/yookassa/methods/"
 
     def test_list_returns_only_user_payment_methods(self):
         method = PaymentMethod.objects.create(

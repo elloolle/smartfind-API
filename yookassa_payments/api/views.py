@@ -22,7 +22,12 @@ from ..service import (
     make_trial_auto_pay,
     decline_subscription,
 )
-from .serializers import PaymentSerializer, PaymentMethodSerializer
+from .serializers import (
+    PaymentSerializer,
+    PaymentMethodSerializer,
+    EventTypeSerializer,
+    PaymentEventSerializer,
+)
 from ..models import Payment, PaymentMethod
 from rest_framework import mixins, viewsets
 from core.helpers import now
@@ -71,7 +76,6 @@ class WebHookView(APIView):
             return
         product = Product.objects.filter(name=metadata.get("product")).first()
         if not product:
-            logger.exception(f"Product not found: {metadata['product']}")
             return
         self.product = product
         if metadata.get("trial"):
@@ -118,16 +122,13 @@ class WebHookView(APIView):
         )
 
     def process_payment_event(self, event):
-        obj = event["object"]
-        metadata = obj["metadata"]
-        user_id = metadata.get("user_id")
-        user = User.objects.filter(id=user_id).first()
-        if not user:
-            logger.exception(f"User not found: {user_id}")
-        self.user = user
-        self.sub = Subscription.objects.filter(user=self.user).first()
-        self.event_status = self.event_type.removeprefix("payment.")
-
+        serializer = PaymentEventSerializer(data={"event": event})
+        serializer.is_valid(raise_exception=True)
+        validated_data = serializer.validated_data
+        self.user = validated_data["user"]
+        self.sub = validated_data["sub"]
+        self.event_status = validated_data["event_status"]
+        obj = validated_data["obj"]
         self.log_payment_into_db(obj)
         self.log_payment_method_into_db(obj["payment_method"])
         if self.event_type in ("payment.succeeded", "payment.waiting_for_capture"):
@@ -136,13 +137,11 @@ class WebHookView(APIView):
             self.process_canceled_payment(obj)
 
     def post(self, request, *args, **kwargs):
-        logger.info(f"webhook request: {request.data}")
         event = request.data
-        try:
-            WebhookNotification(event)
-        except Exception as e:
-            logger.exception(f"Webhook notification failed: {e}")
-        self.event_type = event["event"]
+        logger.info(f"webhook request: {event}")
+        serializer = EventTypeSerializer(data={"event": event})
+        serializer.is_valid(raise_exception=True)
+        self.event_type = serializer.validated_data["event_type"]
         if self.event_type.startswith("payment."):
             self.process_payment_event(event)
         return Response(status=status.HTTP_200_OK)
@@ -189,83 +188,3 @@ class PaymentViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 
     def get_queryset(self):
         return Payment.objects.filter(user=self.request.user)
-
-
-a = {
-    "type": "notification",
-    "event": "payment.succeeded",
-    "object": {
-        "id": "30fd6026-000f-5001-8000-1e78969d3895",
-        "status": "succeeded",
-        "amount": {"value": "100.00", "currency": "RUB"},
-        "income_amount": {"value": "95.73", "currency": "RUB"},
-        "recipient": {"account_id": "1239880", "gateway_id": "2617846"},
-        "payment_method": {
-            "type": "bank_card",
-            "id": "30fd6026-000f-5001-8000-1e78969d3895",
-            "saved": True,
-            "status": "active",
-            "title": "Bank card *4444",
-            "card": {
-                "first6": "555555",
-                "last4": "4444",
-                "expiry_year": "2030",
-                "expiry_month": "11",
-                "card_type": "MasterCard",
-                "card_product": {"code": "E"},
-                "issuer_country": "US",
-            },
-        },
-        "captured_at": "2026-01-17T08:46:45.712Z",
-        "created_at": "2026-01-17T08:46:30.538Z",
-        "test": True,
-        "refunded_amount": {"value": "0.00", "currency": "RUB"},
-        "paid": True,
-        "refundable": True,
-        "metadata": {
-            "user_id": "1",
-            "cms_name": "yookassa_sdk_python",
-            "product": "pro_month_subscription",
-        },
-        "authorization_details": {
-            "rrn": "685777020785792",
-            "auth_code": "704516",
-            "three_d_secure": {
-                "applied": False,
-                "method_completed": False,
-                "challenge_completed": False,
-            },
-        },
-    },
-}
-
-b = {
-    "type": "notification",
-    "event": "payment.succeeded",
-    "object": {
-        "id": "30f5d918-000f-5001-9000-14efbe8f8527",
-        "status": "succeeded",
-        "amount": {"value": "100.00", "currency": "RUB"},
-        "income_amount": {"value": "95.73", "currency": "RUB"},
-        "recipient": {"account_id": "1239880", "gateway_id": "2617846"},
-        "payment_method": {
-            "type": "yoo_money",
-            "id": "30f5d918-000f-5001-9000-14efbe8f8527",
-            "saved": True,
-            "status": "active",
-            "title": "YooMoney wallet 410011758831136",
-            "account_number": "410011758831136",
-        },
-        "captured_at": "2026-01-11T15:44:35.557Z",
-        "created_at": "2026-01-11T15:44:24.482Z",
-        "test": True,
-        "refunded_amount": {"value": "0.00", "currency": "RUB"},
-        "paid": True,
-        "refundable": True,
-        "metadata": {
-            "user_id": "2",
-            "cms_name": "yookassa_sdk_python",
-            "product": "pro_month_subscription",
-        },
-    },
-}

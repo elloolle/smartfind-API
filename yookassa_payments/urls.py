@@ -10,7 +10,7 @@ from .api.views import (
 )
 
 router = DefaultRouter()
-router.register("method", PaymentMethodViewSet, basename="payment-method")
+router.register("methods", PaymentMethodViewSet, basename="payment-method")
 router.register("", PaymentViewSet, basename="payment")
 
 urlpatterns = [

@@ -1,9 +1,6 @@
-## Запуск проекта
+## Запуск проекта полностью в docker
 ```bash
-pip install -r requirements.txt
 docker compose --file deployment/docker-compose.yaml up -d --build
-python manage.py migrate
-python manage.py runserver
 ```
 ## Запуск тестов
 ```bash
