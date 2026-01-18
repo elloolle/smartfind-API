@@ -84,7 +84,7 @@ def make_auto_pay_every_n_days_after_k_days(payment_method, product, n, k):
         name=f"{PAYMENT_JOB_NAME}_{payment_method.id}",
         defaults={
             "interval": interval,
-            "task": "yookassa_payments.tasks.withdraw_money_for_product",
+            "task": "yookassa_payments.tasks.withdraw_money",
             "start_time": now() + timedelta(days=k),
             "enabled": True,
             "kwargs": task_kwargs,

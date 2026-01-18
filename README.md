@@ -1,7 +1,7 @@
 ## Запуск проекта
 ```bash
 pip install -r requirements.txt
-docker compose --file deployment/docker-compose.yaml up -d
+docker compose --file deployment/docker-compose.yaml up -d --build
 python manage.py migrate
 python manage.py runserver
 ```
@@ -33,7 +33,10 @@ ngrok http 8000
 ```bash
     python manage.py startapp [name of app] --template ".\utils\app_template"                      
 ``` 
-
+## Запуск docker compose
+```bash
+    docker compose --file deployment/docker-compose.yaml up -d
+```
 ## Удалить бд
 ```bash
      docker rm -f  deployment-postgres-1 | docker volume rm deployment_db_data

@@ -53,3 +53,6 @@ https://docs.stripe.com/testing#declined-payments
 4000000000000002 - decline
 4000000000000341 - accept and after decline all payments
 4242424242424242 - accept
+
+## URL адрес flower
+http://127.0.0.1:5555/ 

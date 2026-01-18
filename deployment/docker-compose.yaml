@@ -14,5 +14,30 @@ services:
     image: redis:6
     ports:
       - "6379:6379"
+  django: &django
+    build:
+      context: ..
+      dockerfile: deployment/django.Dockerfile
+#    ports:
+#      - "8000:8000"
+    volumes:
+      - ..:/app:z
+    working_dir: /app
+    depends_on:
+      - postgres
+      - redis
+  flower:
+    <<: *django
+    command: celery -A smartfindAPI flower
+    ports:
+      - "5555:5555"
+  worker:
+    <<: *django
+    command: celery -A smartfindAPI worker -l info
+    ports: []
+  beat:
+    <<: *django
+    command: celery -A smartfindAPI beat -l info
+    ports: []
 volumes:
   db_data:

@@ -78,9 +78,7 @@ class WebHookViewTests(APITestCase):
 
     def _assert_periodic_task(self, payment_method_id, amount, user_id, trial=False):
         task = PeriodicTask.objects.get(name=f"{PAYMENT_JOB_NAME}_{payment_method_id}")
-        self.assertEqual(
-            task.task, "yookassa_payments.tasks.withdraw_money_for_product"
-        )
+        self.assertEqual(task.task, "yookassa_payments.tasks.withdraw_money")
         kwargs = json.loads(task.kwargs)
         self.assertEqual(kwargs["payment_method_id"], payment_method_id)
         self.assertEqual(kwargs["amount"], amount)
@@ -149,7 +147,7 @@ class WebHookViewTests(APITestCase):
         PeriodicTask.objects.create(
             name=f"{PAYMENT_JOB_NAME}_{payment_method_id}",
             interval=interval,
-            task="yookassa_payments.tasks.withdraw_money_for_product",
+            task="yookassa_payments.tasks.withdraw_money",
             start_time=timezone.now(),
             enabled=True,
             kwargs=json.dumps(

@@ -69,7 +69,7 @@ class WebHookView(APIView):
         metadata = obj["metadata"]
         if metadata.get("autopay"):
             return
-        product = Product.objects.filter(name=metadata["product"]).first()
+        product = Product.objects.filter(name=metadata.get("product")).first()
         if not product:
             logger.exception(f"Product not found: {metadata['product']}")
             return
