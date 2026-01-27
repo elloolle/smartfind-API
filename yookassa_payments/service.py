@@ -5,7 +5,7 @@ import uuid
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
 from yookassa import Configuration, Payment, PaymentMethod
 import json
-from core.models import Product, SubscriptionStatus
+from core.models import Product, SubscriptionStatus, Subscription
 from datetime import timedelta
 from core.helpers import now
 from functools import partial
@@ -113,3 +113,8 @@ def decline_subscription(subscription):
     subscription.status = SubscriptionStatus.UNPAID
     subscription.save()
     decline_auto_pay(subscription.id)
+
+
+def decline_subscription_by_user(user):
+    subscription = Subscription.objects.get(user=request.user)
+    decline_subscription(subscription)

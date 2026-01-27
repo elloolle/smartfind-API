@@ -21,6 +21,7 @@ from ..service import (
     make_auto_pay,
     make_trial_auto_pay,
     decline_subscription,
+    decline_subscription_by_user,
 )
 from .serializers import (
     PaymentSerializer,
@@ -52,7 +53,6 @@ class WebHookView(APIView):
             if sub:
                 sub.delete()
             Subscription.objects.create(
-                id=self.payment_method.id,
                 user=self.user,
                 status=SubscriptionStatus.ACTIVE,
                 product=self.product,
@@ -63,7 +63,6 @@ class WebHookView(APIView):
         if self.sub:
             self.sub.delete()
         Subscription.objects.create(
-            id=self.payment_method.id,
             user=self.user,
             status=SubscriptionStatus.ACTIVE,
             product=self.product,
@@ -129,6 +128,7 @@ class WebHookView(APIView):
         self.sub = validated_data["sub"]
         self.event_status = validated_data["event_status"]
         obj = validated_data["obj"]
+
         self.log_payment_into_db(obj)
         self.log_payment_method_into_db(obj["payment_method"])
         if self.event_type in ("payment.succeeded", "payment.waiting_for_capture"):
@@ -156,8 +156,7 @@ class SubscriptionView(APIView):
         return Response(get_subscription_payment_link(user_id, product_name))
 
     def delete(self, request, *args, **kwargs):
-        subscription = Subscription.objects.get(user=request.user)
-        decline_subscription(subscription)
+        decline_subscription_by_user(request.user)
 
 
 class TrialSubscriptionView(APIView):
@@ -177,7 +176,10 @@ class PaymentMethodViewSet(
     permission_classes = [IsAuthenticated]
     serializer_class = PaymentMethodSerializer
 
-    # TODO добавить возможность удаления paymentMethod
+    def perform_destroy(self, payment_method):
+        decline_subscription_by_user(self.request.user)
+        payment_method.delete()
+
     def get_queryset(self):
         return PaymentMethod.objects.filter(user=self.request.user)
 

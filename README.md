@@ -1,16 +1,36 @@
-## Запуск проекта полностью в docker
+## Запуск проекта
 ```bash
-docker compose --file deployment/docker-compose.yaml up -d --build
+  docker compose --file deployment/docker-compose.yaml up -d --build
+```
+## Запуск проекта без билда
+```bash
+  docker compose --file deployment/docker-compose.yaml up -d
+```
+## Удалить бд
+```bash
+     docker rm -f  deployment-postgres-1 | docker volume rm deployment_db_data
+```
+### Команды для сервиса django
+## Перед запуском нужно зайти в консоль сервиса django
+```bash
+    docker compose --file deployment/docker-compose.yaml exec django bash
+```
+## Запуск проверки линтера ruff
+```bash
+    ruff check .
 ```
 ## Запуск тестов
 ```bash
-python manage.py test
+    python manage.py test
 ```
-## Тестирование вебхуков
+## Инициализация бд дефолтными данными(запускается при старте контейнера)
 ```bash
-stripe listen --forward-to localhost:8000/api/payments/webhook/  # активация stripe cli     
-stripe trigger checkout.session.completed # отправка запроса на вебхук 
+    python manage.py create_default_db_objects
 ```
+## Создание нового шаблонного приложения
+```bash
+    python manage.py startapp [name of app] --template ".\utils\app_template"                      
+``` 
 ## Прокинуть вебхуки
 # clo
 ```bash
@@ -24,21 +44,4 @@ ngrok http 8000
 1. Создать через админку новый api_key со значением STRIPE_API_KEY.
 2. Создать через админку новый webhook endpoint с base_url, на который stripe будет напрямую присылать события
 3. В stripe поставить url для приема вебхуков, который стал названием созданного webhook endpoint
-4. python ```python manage.py sync_djstripe_webhook_secret```
-
-## Создание нового шаблонного приложения
-```bash
-    python manage.py startapp [name of app] --template ".\utils\app_template"                      
-``` 
-## Запуск docker compose
-```bash
-    docker compose --file deployment/docker-compose.yaml up -d
-```
-## Удалить бд
-```bash
-     docker rm -f  deployment-postgres-1 | docker volume rm deployment_db_data
-```
-## Запуск проверки линтера ruff
-```bash
-    ruff check .
-```
+4. bash ```python manage.py sync_djstripe_webhook_secret```

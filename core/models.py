@@ -31,7 +31,7 @@ class SubscriptionStatus(models.TextChoices):
 
 
 class Subscription(models.Model):
-    id = models.CharField(max_length=256, primary_key=True)
+    id = models.CharField(max_length=256, default=uuid.uuid4, primary_key=True)
     user = models.OneToOneField(
         User, on_delete=models.SET_NULL, related_name="subscription", null=True
     )
@@ -63,7 +63,7 @@ class AbstractPayment(models.Model):
 
 
 class PaymentMethodStatus(models.TextChoices):
-    ACTIVE = "paid", "Paid"
+    ACTIVE = "active", "Active"
     CANCELED = "canceled", "Canceled"
 
 

@@ -20,7 +20,12 @@ services:
       dockerfile: deployment/django.Dockerfile
     ports:
       - "8000:8000"
-    command: ["sh", "-c", "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]
+    command: >
+      sh -c "
+      python manage.py migrate &&
+      python manage.py create_default_db_objects &&
+      python manage.py runserver 0.0.0.0:8000
+      "
     volumes:
       - ..:/app:z
     working_dir: /app
@@ -35,10 +40,10 @@ services:
   worker:
     <<: *django
     command: celery -A smartfindAPI worker -l info
-    ports: []
+    ports: [ ]
   beat:
     <<: *django
     command: celery -A smartfindAPI beat -l info
-    ports: []
+    ports: [ ]
 volumes:
   db_data:

@@ -136,7 +136,6 @@ class WebHookViewTests(APITestCase):
         payment_method_id = self.base_payload["object"]["payment_method"]["id"]
         product = Product.objects.get(name="pro_month_subscription")
         subscription = Subscription.objects.create(
-            id=payment_method_id,
             user=self.user,
             status=SubscriptionStatus.ACTIVE,
             product=product,
