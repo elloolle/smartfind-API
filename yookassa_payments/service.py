@@ -116,5 +116,5 @@ def decline_subscription(subscription):
 
 
 def decline_subscription_by_user(user):
-    subscription = Subscription.objects.get(user=request.user)
+    subscription = Subscription.objects.get(user=user)
     decline_subscription(subscription)

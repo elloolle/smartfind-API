@@ -32,6 +32,7 @@ services:
     depends_on:
       - postgres
       - redis
+
   flower:
     <<: *django
     command: celery -A smartfindAPI flower

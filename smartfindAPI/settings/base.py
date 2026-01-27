@@ -136,10 +136,10 @@ SIMPLE_JWT = {
 
 
 EMBEDDINGS_API_KEYS = {
-    "openai": os.environ["OPENAI_API_KEY"],
-    "google": os.environ["GOOGLE_API_KEY"],
-    "openrouter": os.environ["OPENROUTER_API_KEY"],
-    "morphllm": os.environ["MORPHLM_API_KEY"],
+    "openai": os.environ.get("OPENAI_API_KEY"),
+    "google": os.environ.get("GOOGLE_API_KEY"),
+    "openrouter": os.environ.get("OPENROUTER_API_KEY"),
+    "morphllm": os.environ.get("MORPHLM_API_KEY"),
 }
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 MORPHLM_BASE_URL = "https://api.morphllm.com/v1"
