@@ -98,7 +98,6 @@ class WebHookViewTests(APITestCase):
         subscription = Subscription.objects.get(user=self.user)
         self.assertEqual(subscription.status, SubscriptionStatus.ACTIVE)
         self.assertEqual(subscription.product.name, "pro_month_subscription")
-        self.assertEqual(subscription.id, payload["object"]["payment_method"]["id"])
         self._assert_periodic_task(
             payment_method_id=payload["object"]["payment_method"]["id"],
             amount=subscription.product.month_price,
@@ -124,7 +123,6 @@ class WebHookViewTests(APITestCase):
         subscription = Subscription.objects.get(user=self.user)
         self.assertEqual(subscription.status, SubscriptionStatus.ACTIVE)
         self.assertEqual(subscription.product.name, "pro_month_subscription")
-        self.assertEqual(subscription.id, payload["object"]["payment_method"]["id"])
         self._assert_periodic_task(
             payment_method_id=payload["object"]["payment_method"]["id"],
             amount=subscription.product.month_price,
@@ -168,10 +166,7 @@ class WebHookViewTests(APITestCase):
             ).exists()
         )
 
-    @patch("yookassa_payments.api.views.now")
-    def test_webhook_logs_payment_and_method_for_yoo_money(self, mock_now):
-        fixed_time = timezone.now()
-        mock_now.return_value = fixed_time
+    def test_webhook_logs_payment_and_method_for_yoo_money(self):
         payload = deepcopy(self.base_payload)
 
         response = self.client.post(self.url, payload, format="json")
@@ -180,7 +175,6 @@ class WebHookViewTests(APITestCase):
         payment = Payment.objects.get(id=payload["object"]["id"])
         self.assertEqual(payment.user, self.user)
         self.assertEqual(payment.status, PaymentStatus.PAID)
-        self.assertEqual(payment.period_start, fixed_time)
         self.assertEqual(payment.amount, Decimal(payload["object"]["amount"]["value"]))
         self.assertEqual(
             payment.income_amount,

@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 from loguru import logger
 from pathlib import Path
+from celery.schedules import crontab
 
 load_dotenv()
 
@@ -16,7 +17,9 @@ DATABASES = {
         "NAME": "smartfind_db",  # Name of your PostgreSQL database
         "USER": "admin",  # Username for connecting to the database
         "PASSWORD": "admin",  # Password for the database user
-        "HOST": "postgres",  # Or the IP address/hostname of your PostgreSQL server
+        "HOST": os.environ.setdefault(
+            "DB_HOST", "postgres"
+        ),  # Or the IP address/hostname of your PostgreSQL server
         "PORT": "5432",
     }
 }
@@ -62,6 +65,14 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+
+CELERY_BEAT_SCHEDULE = {
+    "update_yookassa_subscriptions_statuses_based_on_end_period": {
+        "task": "yookassa_payments.tasks.update_subscriptions_statuses_based_on_end_period",
+        "schedule": crontab(minute="*/1", hour="*", day_of_week="*"),
+        # "schedule": crontab(minute=0, hour="*/1"),
+    },
+}
 
 DEBUG_ADMIN_NAME = "admin"
 DEBUG_ADMIN_PASSWORD = "admin"

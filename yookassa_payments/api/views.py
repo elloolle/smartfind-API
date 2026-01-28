@@ -1,5 +1,4 @@
 from django.conf import settings
-from numpy.f2py.auxfuncs import throw_error
 from rest_framework.response import Response
 from rest_framework import status
 from ..helpers import make_anonymous_card
@@ -7,7 +6,8 @@ from loguru import logger
 from django.contrib.auth import get_user_model
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
-from yookassa.domain.notification import WebhookNotification
+from datetime import timedelta
+
 from core.models import (
     Product,
     Subscription,
@@ -36,10 +36,28 @@ from core.helpers import now
 User = get_user_model()
 
 
-YOOKASSA_TO_CORE_STATUS = {
+YOOKASSA_TO_CORE_PAYMENT_STATUS = {
     "succeeded": PaymentStatus.PAID,
     "canceled": PaymentStatus.UNPAID,
 }
+
+YOOKASSA_TO_CORE_PAYMENT_METHOD_STATUS = {
+    "succeeded": PaymentMethodStatus.ACTIVE,
+    "canceled": PaymentMethodStatus.CANCELED,
+}
+
+
+def get_details_from_payment_method(payment_method):
+    details = {"type": payment_method["type"]}
+    if payment_method["type"] == "yoo_money":
+        details["number"] = payment_method["account_number"]
+    elif payment_method["type"] == "bank_card":
+        card = payment_method["card"]
+        details["number"] = make_anonymous_card(card["first6"], card["last4"])
+        details["expire_date"] = f"{card["expiry_month"]}/{card["expiry_year"][2:4]}"
+    else:
+        logger.exception(f"Payment method not supported: {payment_method}")
+    return details
 
 
 class WebHookView(APIView):
@@ -72,6 +90,7 @@ class WebHookView(APIView):
     def process_success_payment(self, obj):
         metadata = obj["metadata"]
         if metadata.get("autopay"):
+            self.sub.end_period += timedelta(days=settings.DAYS_IN_MONTH)
             return
         product = Product.objects.filter(name=metadata.get("product")).first()
         if not product:
@@ -88,19 +107,9 @@ class WebHookView(APIView):
         decline_subscription(self.sub)
 
     def log_payment_method_into_db(self, payment_method):
-        status = YOOKASSA_TO_CORE_STATUS[self.event_status]
-        details = {"type": payment_method["type"]}
+        status = YOOKASSA_TO_CORE_PAYMENT_METHOD_STATUS[self.event_status]
+        details = get_details_from_payment_method(payment_method)
 
-        if payment_method["type"] == "yoo_money":
-            details["number"] = payment_method["account_number"]
-        elif payment_method["type"] == "bank_card":
-            card = payment_method["card"]
-            details["number"] = make_anonymous_card(card["first6"], card["last4"])
-            details["expire_date"] = (
-                f"{card["expiry_month"]}/{card["expiry_year"][2:4]}"
-            )
-        else:
-            logger.exception(f"Payment method not supported: {self.request.data}")
         payment_method_obj, _ = PaymentMethod.objects.update_or_create(
             id=payment_method["id"],
             defaults={"user": self.user, "status": status, "details": details},
@@ -108,13 +117,12 @@ class WebHookView(APIView):
         self.payment_method = payment_method_obj
 
     def log_payment_into_db(self, payment):
-        status = YOOKASSA_TO_CORE_STATUS[self.event_status]
+        status = YOOKASSA_TO_CORE_PAYMENT_STATUS[self.event_status]
         Payment.objects.update_or_create(
             id=payment["id"],
             defaults={
                 "user": self.user,
                 "status": status,
-                "period_start": now(),
                 "amount": payment["amount"]["value"],
                 "income_amount": payment["income_amount"]["value"],
             },

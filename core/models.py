@@ -5,6 +5,7 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.forms.models import model_to_dict
 from .helpers import now
+from datetime import timedelta
 
 User = get_user_model()
 
@@ -24,10 +25,10 @@ class Product(models.Model):
 class SubscriptionStatus(models.TextChoices):
     ACTIVE = "active", "Active"
     UNPAID = "unpaid", "Unpaid"
-    PAUSED = (
-        "paused",
-        "Paused",
-    )  # если триал версия закончилась, а пользователь не оплатил
+
+
+def now_plus_one_month():
+    return now() + timedelta(days=settings.DAYS_IN_MONTH)
 
 
 class Subscription(models.Model):
@@ -37,9 +38,7 @@ class Subscription(models.Model):
     )
     status = models.CharField(choices=SubscriptionStatus.choices)
     start_period = models.DateTimeField(default=now)
-    # end_period = models.DateTimeField()
-    # TODO сделать end_period и его обновление во всех payments и
-    # изменение статуса в зависимости от того кончился ли срок подписки
+    end_period = models.DateTimeField(default=now_plus_one_month, null=True)
     product = models.ForeignKey(
         Product,
         on_delete=models.PROTECT,
@@ -55,7 +54,7 @@ class AbstractPayment(models.Model):
     id = models.CharField(max_length=256, primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="payment")
     status = models.CharField(choices=PaymentStatus.choices)
-    period_start = models.DateTimeField()
+    period_start = models.DateTimeField(default=now)
     amount = models.DecimalField(decimal_places=2, max_digits=10)
 
     class Meta:

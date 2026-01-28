@@ -1,9 +1,9 @@
+from datetime import datetime, timedelta
 from unittest.mock import patch
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import override_settings
-from django.utils import timezone
 from djstripe.models import Customer, Subscription
 from rest_framework import status
 from rest_framework.response import Response
@@ -49,11 +49,15 @@ class SubscriptionViewTests(APITestCase):
         product_lookup_key="pro_month_subscription",
         status="active",
     ):
+        start_date = datetime(year=2000, month=1, day=1)
+        end_date = start_date + timedelta(days=30)
         stripe_data = {
             "id": subscription_id,
             "customer": self.customer.id,
             "status": status,
             "plan": product_lookup_key,
+            "start_date": int(start_date.timestamp()),
+            "ended_at": int(end_date.timestamp()),
             "items": {
                 "data": [
                     {
@@ -68,7 +72,6 @@ class SubscriptionViewTests(APITestCase):
             id=subscription_id,
             livemode=False,
             customer=self.customer,
-            created=timezone.now(),
             metadata={},
             stripe_data=stripe_data,
         )

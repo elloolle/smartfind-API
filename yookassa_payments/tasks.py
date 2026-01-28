@@ -1,5 +1,7 @@
 from celery import shared_task
 from yookassa import Payment
+from core.models import Subscription, SubscriptionStatus
+from core.helpers import now
 
 
 @shared_task
@@ -14,3 +16,10 @@ def withdraw_money(payment_method_id, amount, metadata):
         }
     )
     return payment.json()
+
+
+@shared_task
+def update_subscriptions_statuses_based_on_end_period():
+    Subscription.objects.filter(end_period__lte=now()).update(
+        status=SubscriptionStatus.UNPAID
+    )

@@ -1,5 +1,4 @@
 from django.contrib.auth import get_user_model
-from django.utils import timezone
 from djstripe.models import Customer, Subscription as DjstripeSubscription
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -8,6 +7,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from core.api.serializers import SubscriptionSerializer
 from core.models import Subscription, SubscriptionStatus
 from users.api.serializers import UserSerializer
+from datetime import datetime, timedelta
 
 User = get_user_model()
 
@@ -50,15 +50,17 @@ class UserViewTests(APITestCase):
         subscription_id,
         *,
         product_lookup_key="pro_month_subscription",
-        created=None,
         status="active",
     ):
-        created = created or timezone.now()
+        start_date = datetime(year=2000, month=1, day=1)
+        end_date = start_date + timedelta(days=30)
         stripe_data = {
             "id": subscription_id,
             "customer": self.customer.id,
             "status": status,
             "plan": product_lookup_key,
+            "start_date": int(start_date.timestamp()),
+            "ended_at": int(end_date.timestamp()),
             "items": {
                 "data": [
                     {
@@ -73,7 +75,6 @@ class UserViewTests(APITestCase):
             id=subscription_id,
             livemode=False,
             customer=self.customer,
-            created=created,
             metadata={},
             stripe_data=stripe_data,
         )

@@ -3,8 +3,13 @@ from loguru import logger
 from django.forms.models import model_to_dict
 import uuid
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
-from yookassa import Configuration, Payment, PaymentMethod
+from yookassa import (
+    Configuration,
+    Payment as YookassaPayment,
+    PaymentMethod as YookassaPaymentMethod,
+)
 import json
+from .models import PaymentMethod
 from core.models import Product, SubscriptionStatus, Subscription
 from datetime import timedelta
 from core.helpers import now
@@ -17,7 +22,7 @@ PAYMENT_JOB_NAME = "yookassa_payment_job"
 
 
 def make_payment(amount, metadata):
-    payment = Payment.create(
+    payment = YookassaPayment.create(
         {
             "amount": {"value": amount, "currency": "RUB"},
             "confirmation": {
@@ -35,7 +40,7 @@ def make_payment(amount, metadata):
 
 
 def make_payment_method(metadata):
-    payment_method = PaymentMethod.create(
+    payment_method = YookassaPaymentMethod.create(
         {
             "confirmation": {
                 "type": "redirect",
@@ -112,7 +117,8 @@ def decline_auto_pay(payment_method_id):
 def decline_subscription(subscription):
     subscription.status = SubscriptionStatus.UNPAID
     subscription.save()
-    decline_auto_pay(subscription.id)
+    payment_method_id = PaymentMethod.objects.get(user=subscription.user).id
+    decline_auto_pay(payment_method_id)
 
 
 def decline_subscription_by_user(user):

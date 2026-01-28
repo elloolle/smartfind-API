@@ -1,10 +1,10 @@
 ## Запуск проекта
 ```bash
-  docker compose --file deployment/docker-compose.yaml up -d --build
+  docker compose --file deployment/docker-compose.yml up -d --build
 ```
 ## Запуск проекта без билда
 ```bash
-  docker compose --file deployment/docker-compose.yaml up -d
+  docker compose --file deployment/docker-compose.yml up -d
 ```
 ## Удалить бд
 ```bash
@@ -13,7 +13,7 @@
 ### Команды для сервиса django
 ## Перед запуском нужно зайти в консоль сервиса django
 ```bash
-    docker compose --file deployment/docker-compose.yaml exec django bash
+    docker compose --file deployment/docker-compose.yml exec django bash
 ```
 ## Запуск проверки линтера ruff
 ```bash
