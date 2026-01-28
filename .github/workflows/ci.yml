@@ -6,7 +6,6 @@ env:
 
 on: push
 
-if: "!contains(github.event.commits[0].message, '[skip ci]')"
 jobs:
   lint:
     runs-on: ubuntu-latest
