@@ -78,31 +78,44 @@ class WebHookView(APIView):
             make_auto_pay(self.payment_method, self.product)
 
     def process_trial_subscription(self):
-        if self.sub:
-            self.sub.delete()
+        self.sub.delete()
+        Subscription.objects.create(
+            user=self.user,
+            status=SubscriptionStatus.ACTIVE,
+            product=self.product,
+            end_period=now() + self.product.delay,
+        )
+        make_trial_auto_pay(self.payment_method, self.product)
+
+    def process_first_payment(self):
+        self.sub.delete()
         Subscription.objects.create(
             user=self.user,
             status=SubscriptionStatus.ACTIVE,
             product=self.product,
         )
-        make_trial_auto_pay(self.payment_method, self.product)
+        make_auto_pay(self.payment_method, self.product)
 
-    def process_success_payment(self, obj):
-        metadata = obj["metadata"]
-        if metadata.get("autopay"):
+    def process_auto_pay_payment(self):
+        self.sub.end_period += timedelta(days=settings.DAYS_IN_MONTH)
+
+    def process_success_payment(self):
+        if self.sub.is_trial:
+            self.sub.product = Subscription.objects.get()
+        if self.is_auto_pay and not self.sub.is_trial:
             self.sub.end_period += timedelta(days=settings.DAYS_IN_MONTH)
             return
-        product = Product.objects.filter(name=metadata.get("product")).first()
+        product = Product.objects.filter(name=self.metadata.get("product")).first()
         if not product:
             return
         self.product = product
-        if metadata.get("trial"):
+        if self.metadata.get("trial"):
             self.process_trial_subscription()
         else:
             self.process_subscription()
 
-    def process_canceled_payment(self, obj):
-        if not self.sub:
+    def process_canceled_payment(self):
+        if not self.is_auto_pay:
             return
         decline_subscription(self.sub)
 
@@ -136,13 +149,14 @@ class WebHookView(APIView):
         self.sub = validated_data["sub"]
         self.event_status = validated_data["event_status"]
         obj = validated_data["obj"]
-
+        self.metadata = obj["metadata"]
+        self.is_auto_pay = obj.get("auto_pay", False)
         self.log_payment_into_db(obj)
         self.log_payment_method_into_db(obj["payment_method"])
         if self.event_type in ("payment.succeeded", "payment.waiting_for_capture"):
-            self.process_success_payment(obj)
+            self.process_success_payment()
         if self.event_type == "payment.canceled":
-            self.process_canceled_payment(obj)
+            self.process_canceled_payment()
 
     def post(self, request, *args, **kwargs):
         event = request.data
@@ -159,18 +173,32 @@ class SubscriptionView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        user_id = request.user.id
+        user = request.user
+        user_id = user.id
         product_name = request.data.get("product_name")
-        return Response(get_subscription_payment_link(user_id, product_name))
-
-    def delete(self, request, *args, **kwargs):
-        decline_subscription_by_user(request.user)
+        if user.subscription.product_name != product_name:
+            return Response(get_subscription_payment_link(user_id, product_name))
+        return Response(
+            message="The user has already subscription",
+            status=status.HTTP_403_FORBIDDEN,
+        )
 
 
 class TrialSubscriptionView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
+        user = request.user
+        if not user.may_have_trial:
+            return Response(
+                message="The user has already signed up for a trial subscription.",
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if user.subscription.product_name != settings.DEFAULT_PRODUCT_NAME:
+            return Response(
+                message="The user has already subscription",
+                status=status.HTTP_403_FORBIDDEN,
+            )
         user_id = request.user.id
         product_name = settings.TRIAL_PRODUCT_NAME
         return Response(get_trial_subscription_payment_link(user_id, product_name))
@@ -186,7 +214,7 @@ class PaymentMethodViewSet(
 
     def perform_destroy(self, payment_method):
         decline_subscription_by_user(self.request.user)
-        payment_method.delete()
+        payment_method.status = PaymentMethodStatus.CANCELED
 
     def get_queryset(self):
         return PaymentMethod.objects.filter(user=self.request.user)

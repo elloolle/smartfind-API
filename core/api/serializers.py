@@ -5,6 +5,7 @@ from loguru import logger
 from rest_framework import serializers
 
 from core.models import Subscription, SubscriptionStatus, Product
+from ..service import create_default_subscription_to_user
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -22,10 +23,4 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = validated_data["user"]
-        default_product = Product.objects.get(name=settings.DEFAULT_PRODUCT_NAME)
-        return Subscription.objects.create(
-            id=uuid.uuid4(),
-            user=user,
-            status=SubscriptionStatus.ACTIVE,
-            product=default_product,
-        )
+        return create_default_subscription_to_user(user)

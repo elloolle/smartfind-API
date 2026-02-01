@@ -10,10 +10,11 @@ from yookassa import (
 )
 import json
 from .models import PaymentMethod
-from core.models import Product, SubscriptionStatus, Subscription
+from core.models import Product, SubscriptionStatus, Subscription, PaymentMethodStatus
 from datetime import timedelta
 from core.helpers import now
 from functools import partial
+from core.service import create_default_subscription_to_user
 
 Configuration.account_id = settings.YOOKASSA_ACCOUNT_ID
 Configuration.secret_key = settings.YOOKASSA_SECRET_KEY
@@ -115,10 +116,13 @@ def decline_auto_pay(payment_method_id):
 
 
 def decline_subscription(subscription):
-    subscription.status = SubscriptionStatus.UNPAID
-    subscription.save()
-    payment_method_id = PaymentMethod.objects.get(user=subscription.user).id
+    user = subscription.user
+    payment_method_id = PaymentMethod.objects.filter(
+        user=user, status=PaymentMethodStatus.ACTIVE
+    ).id
     decline_auto_pay(payment_method_id)
+    subscription.delete()
+    create_default_subscription_to_user(user)
 
 
 def decline_subscription_by_user(user):

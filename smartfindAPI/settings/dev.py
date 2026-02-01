@@ -26,6 +26,12 @@ DATABASES = {
 
 DEFAULT_PRODUCTS = [
     {
+        "name": "trial_pro_month_subscription",
+        "plan": "trial",
+        "month_price": 0,
+        "delay": timedelta(days=14),
+    },
+    {
         "name": "pro_month_subscription",
         "plan": "pro",
         "month_price": 100,
@@ -39,9 +45,8 @@ DEFAULT_PRODUCTS = [
     },
 ]
 DEFAULT_PRODUCT_NAME = "default_subscription"
-TRIAL_PERIOD_DAYS = 14
 DAYS_BEFORE_SUBSCRIPTION_DEACTIVATION = 1
-TRIAL_PRODUCT_NAME = "pro_month_subscription"
+TRIAL_PRODUCT_NAME = "trial_pro_month_subscription"
 CHECKOUT_SUCCESS_URL = "http://127.0.0.1:8000"
 CHECKOUT_CANCEL_URL = "http://127.0.0.1:8000"
 PORTAL_SUCCESS_URL = "http://127.0.0.1:8000"

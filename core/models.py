@@ -44,6 +44,14 @@ class Subscription(models.Model):
         on_delete=models.PROTECT,
     )
 
+    @property
+    def product_name(self):
+        return self.product.name
+
+    @property
+    def is_trial(self):
+        return self.product_name == settings.TRIAL_PRODUCT_NAME
+
 
 class PaymentStatus(models.TextChoices):
     PAID = "paid", "Paid"

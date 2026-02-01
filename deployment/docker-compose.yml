@@ -17,7 +17,7 @@ services:
   django: &django
     image: smart_find_django
     build:
-      context: ${GITHUB_WORKSPACE:-..}
+      context: ..
       dockerfile: deployment/django.Dockerfile
     ports:
       - "8000:8000"
@@ -28,7 +28,7 @@ services:
       python manage.py runserver 0.0.0.0:8000
       "
     volumes:
-      - ${GITHUB_WORKSPACE:-..}:/app:z
+      - ..:/app:z
     working_dir: /app
     depends_on:
       - postgres
