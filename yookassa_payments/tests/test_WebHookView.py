@@ -20,7 +20,7 @@ from core.models import (
     SubscriptionStatus,
 )
 from yookassa_payments.models import Payment, PaymentMethod
-from ..service import PAYMENT_JOB_NAME
+from ..service import AUTO_PAY_JOB_NAME, PAY_ONCE_JOB_NAME
 
 User = get_user_model()
 
@@ -76,18 +76,37 @@ class WebHookViewTests(APITestCase):
                 },
             )
 
-    def _assert_periodic_task(self, payment_method_id, amount, user_id, trial=False):
-        task = PeriodicTask.objects.get(name=f"{PAYMENT_JOB_NAME}_{payment_method_id}")
+    def _assert_auto_pay_task(self, payment_method_id, amount, user_id, product_name):
+        task = PeriodicTask.objects.get(name=f"{AUTO_PAY_JOB_NAME}_{payment_method_id}")
         self.assertEqual(task.task, "yookassa_payments.tasks.withdraw_money")
         kwargs = json.loads(task.kwargs)
         self.assertEqual(kwargs["payment_method_id"], payment_method_id)
         self.assertEqual(kwargs["amount"], amount)
-        self.assertEqual(kwargs["metadata"], {"user_id": user_id, "auto_pay": True})
-        if trial:
-            expected_date = (
-                timezone.now() + timedelta(days=settings.TRIAL_PERIOD_DAYS)
-            ).date()
-            self.assertEqual(task.start_time.date(), expected_date)
+        self.assertEqual(
+            kwargs["metadata"],
+            {
+                "user_id": user_id,
+                "product": product_name,
+                "auto_pay": True,
+                "trial": False,
+            },
+        )
+
+    def _assert_pay_once_task(self, payment_method_id, amount, user_id, product_name):
+        task = PeriodicTask.objects.get(name=f"{PAY_ONCE_JOB_NAME}_{payment_method_id}")
+        self.assertEqual(task.task, "yookassa_payments.tasks.withdraw_money")
+        kwargs = json.loads(task.kwargs)
+        self.assertEqual(kwargs["payment_method_id"], payment_method_id)
+        self.assertEqual(kwargs["amount"], amount)
+        self.assertEqual(
+            kwargs["metadata"],
+            {
+                "user_id": user_id,
+                "product": product_name,
+                "auto_pay": False,
+                "trial": False,
+            },
+        )
 
     def test_webhook_payment_succeeded_creates_subscription_and_task(self):
         payload = deepcopy(self.base_payload)
@@ -98,17 +117,18 @@ class WebHookViewTests(APITestCase):
         subscription = Subscription.objects.get(user=self.user)
         self.assertEqual(subscription.status, SubscriptionStatus.ACTIVE)
         self.assertEqual(subscription.product.name, "pro_month_subscription")
-        self._assert_periodic_task(
+        self._assert_auto_pay_task(
             payment_method_id=payload["object"]["payment_method"]["id"],
             amount=subscription.product.month_price,
             user_id=self.user.id,
+            product_name=subscription.product.name,
         )
         interval = IntervalSchedule.objects.get(
             every=settings.DAYS_IN_MONTH, period=IntervalSchedule.DAYS
         )
         self.assertEqual(
             PeriodicTask.objects.get(
-                name=f"{PAYMENT_JOB_NAME}_{payload['object']['payment_method']['id']}"
+                name=f"{AUTO_PAY_JOB_NAME}_{payload['object']['payment_method']['id']}"
             ).interval_id,
             interval.id,
         )
@@ -116,23 +136,25 @@ class WebHookViewTests(APITestCase):
     def test_webhook_trial_payment_succeeded_creates_subscription_and_task(self):
         payload = deepcopy(self.base_payload)
         payload["object"]["metadata"]["trial"] = True
+        payload["object"]["metadata"]["product"] = settings.TRIAL_PRODUCT_NAME
 
         response = self.client.post(self.url, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         subscription = Subscription.objects.get(user=self.user)
         self.assertEqual(subscription.status, SubscriptionStatus.ACTIVE)
-        self.assertEqual(subscription.product.name, "pro_month_subscription")
-        self._assert_periodic_task(
+        self.assertEqual(subscription.product.name, settings.TRIAL_PRODUCT_NAME)
+        self._assert_pay_once_task(
             payment_method_id=payload["object"]["payment_method"]["id"],
             amount=subscription.product.month_price,
             user_id=self.user.id,
-            trial=True,
+            product_name=subscription.product.name,
         )
 
     def test_webhook_payment_canceled_marks_subscription_unpaid_and_removes_task(self):
         payment_method_id = self.base_payload["object"]["payment_method"]["id"]
         product = Product.objects.get(name="pro_month_subscription")
+        self.user.subscription.delete()
         subscription = Subscription.objects.create(
             user=self.user,
             status=SubscriptionStatus.ACTIVE,
@@ -142,7 +164,7 @@ class WebHookViewTests(APITestCase):
             every=settings.DAYS_IN_MONTH, period=IntervalSchedule.DAYS
         )
         PeriodicTask.objects.create(
-            name=f"{PAYMENT_JOB_NAME}_{payment_method_id}",
+            name=f"{AUTO_PAY_JOB_NAME}_{payment_method_id}",
             interval=interval,
             task="yookassa_payments.tasks.withdraw_money",
             start_time=timezone.now(),
@@ -159,10 +181,10 @@ class WebHookViewTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         subscription.refresh_from_db()
-        self.assertEqual(subscription.status, SubscriptionStatus.UNPAID)
-        self.assertFalse(
+        self.assertEqual(subscription.status, SubscriptionStatus.ACTIVE)
+        self.assertTrue(
             PeriodicTask.objects.filter(
-                name=f"{PAYMENT_JOB_NAME}_{payment_method_id}"
+                name=f"{AUTO_PAY_JOB_NAME}_{payment_method_id}"
             ).exists()
         )
 

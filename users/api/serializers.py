@@ -15,5 +15,4 @@ class UserSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(
             username=validated_data["username"], password=validated_data["password"]
         )
-        SubscriptionSerializer().create({"user": user})
         return user

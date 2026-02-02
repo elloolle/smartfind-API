@@ -19,9 +19,9 @@ from ..service import (
     get_subscription_payment_link,
     get_trial_subscription_payment_link,
     make_auto_pay,
-    make_trial_auto_pay,
-    decline_subscription,
-    decline_subscription_by_user,
+    make_once_pay,
+    delete_subscription_and_autopay,
+    delete_subscription_and_autopay_by_user,
 )
 from .serializers import (
     PaymentSerializer,
@@ -56,88 +56,59 @@ def get_details_from_payment_method(payment_method):
         details["number"] = make_anonymous_card(card["first6"], card["last4"])
         details["expire_date"] = f"{card["expiry_month"]}/{card["expiry_year"][2:4]}"
     else:
-        logger.exception(f"Payment method not supported: {payment_method}")
+        logger.exception(f"yookassa payment method not supported: {payment_method}")
     return details
 
 
 class WebHookView(APIView):
-    def process_subscription(self):
-        sub = self.sub
-        if (
-            not sub
-            or sub.status != SubscriptionStatus.ACTIVE
-            or sub.product.name == settings.DEFAULT_PRODUCT_NAME
-        ):
-            if sub:
-                sub.delete()
-            Subscription.objects.create(
-                user=self.user,
-                status=SubscriptionStatus.ACTIVE,
-                product=self.product,
-            )
-            make_auto_pay(self.payment_method, self.product)
-
-    def process_trial_subscription(self):
-        self.sub.delete()
-        Subscription.objects.create(
-            user=self.user,
-            status=SubscriptionStatus.ACTIVE,
-            product=self.product,
-            end_period=now() + self.product.delay,
-        )
-        make_trial_auto_pay(self.payment_method, self.product)
-
     def process_first_payment(self):
         self.sub.delete()
-        Subscription.objects.create(
+        product = Product.objects.filter(name=self.product_name).first()
+        sub = Subscription.objects.create(
             user=self.user,
             status=SubscriptionStatus.ACTIVE,
-            product=self.product,
+            product=product,
         )
-        make_auto_pay(self.payment_method, self.product)
+        if sub.is_trial:
+            make_once_pay(self.payment_method, product)
+        else:
+            make_auto_pay(self.payment_method, product)
 
     def process_auto_pay_payment(self):
-        self.sub.end_period += timedelta(days=settings.DAYS_IN_MONTH)
+        product_delay = self.sub.product.delay
+        self.sub.end_period += timedelta(days=product_delay)
 
     def process_success_payment(self):
-        if self.sub.is_trial:
-            self.sub.product = Subscription.objects.get()
-        if self.is_auto_pay and not self.sub.is_trial:
-            self.sub.end_period += timedelta(days=settings.DAYS_IN_MONTH)
-            return
-        product = Product.objects.filter(name=self.metadata.get("product")).first()
-        if not product:
-            return
-        self.product = product
-        if self.metadata.get("trial"):
-            self.process_trial_subscription()
+        if self.is_auto_pay:
+            self.process_auto_pay_payment()
         else:
-            self.process_subscription()
+            self.process_first_payment()
 
     def process_canceled_payment(self):
         if not self.is_auto_pay:
+            # значит это неуспешная попытка первого платежа
             return
-        decline_subscription(self.sub)
+        delete_subscription_and_autopay(self.sub)
 
-    def log_payment_method_into_db(self, payment_method):
+    def log_payment_method_into_db(self, payment_method_json):
         status = YOOKASSA_TO_CORE_PAYMENT_METHOD_STATUS[self.event_status]
-        details = get_details_from_payment_method(payment_method)
+        details = get_details_from_payment_method(payment_method_json)
 
         payment_method_obj, _ = PaymentMethod.objects.update_or_create(
-            id=payment_method["id"],
+            id=payment_method_json["id"],
             defaults={"user": self.user, "status": status, "details": details},
         )
         self.payment_method = payment_method_obj
 
-    def log_payment_into_db(self, payment):
+    def log_payment_into_db(self, payment_json):
         status = YOOKASSA_TO_CORE_PAYMENT_STATUS[self.event_status]
         Payment.objects.update_or_create(
-            id=payment["id"],
+            id=payment_json["id"],
             defaults={
                 "user": self.user,
                 "status": status,
-                "amount": payment["amount"]["value"],
-                "income_amount": payment["income_amount"]["value"],
+                "amount": payment_json["amount"]["value"],
+                "income_amount": payment_json["income_amount"]["value"],
             },
         )
 
@@ -148,11 +119,12 @@ class WebHookView(APIView):
         self.user = validated_data["user"]
         self.sub = validated_data["sub"]
         self.event_status = validated_data["event_status"]
-        obj = validated_data["obj"]
-        self.metadata = obj["metadata"]
-        self.is_auto_pay = obj.get("auto_pay", False)
-        self.log_payment_into_db(obj)
-        self.log_payment_method_into_db(obj["payment_method"])
+        self.product_name = validated_data["product_name"]
+        self.is_auto_pay = validated_data["is_auto_pay"]
+        payment_json = validated_data["obj"]
+
+        self.log_payment_into_db(payment_json)
+        self.log_payment_method_into_db(payment_json["payment_method"])
         if self.event_type in ("payment.succeeded", "payment.waiting_for_capture"):
             self.process_success_payment()
         if self.event_type == "payment.canceled":
@@ -179,7 +151,7 @@ class SubscriptionView(APIView):
         if user.subscription.product_name != product_name:
             return Response(get_subscription_payment_link(user_id, product_name))
         return Response(
-            message="The user has already subscription",
+            {"message": "The user has already subscription"},
             status=status.HTTP_403_FORBIDDEN,
         )
 
@@ -191,12 +163,12 @@ class TrialSubscriptionView(APIView):
         user = request.user
         if not user.may_have_trial:
             return Response(
-                message="The user has already signed up for a trial subscription.",
+                {"message": "The user has already signed up for a trial subscription."},
                 status=status.HTTP_403_FORBIDDEN,
             )
         if user.subscription.product_name != settings.DEFAULT_PRODUCT_NAME:
             return Response(
-                message="The user has already subscription",
+                {"message": "The user has already subscription"},
                 status=status.HTTP_403_FORBIDDEN,
             )
         user_id = request.user.id
@@ -213,7 +185,7 @@ class PaymentMethodViewSet(
     serializer_class = PaymentMethodSerializer
 
     def perform_destroy(self, payment_method):
-        decline_subscription_by_user(self.request.user)
+        delete_subscription_and_autopay_by_user(self.request.user)
         payment_method.status = PaymentMethodStatus.CANCELED
 
     def get_queryset(self):

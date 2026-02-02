@@ -46,7 +46,10 @@ class PaymentEventSerializer(serializers.Serializer):
         user_id = metadata.get("user_id")
         if not user_id:
             raise serializers.ValidationError("metadata.user_id is required")
-
+        product_name = metadata.get("product")
+        if not product_name:
+            raise serializers.ValidationError("metadata.product is required")
+        is_auto_pay = metadata.get("auto_pay", False)
         user = User.objects.filter(id=user_id).first()
         if not user:
             raise serializers.ValidationError(f"User not found: {user_id}")
@@ -55,6 +58,13 @@ class PaymentEventSerializer(serializers.Serializer):
         event_status = event_type.removeprefix("payment.")
 
         attrs.update(
-            {"user": user, "sub": sub, "event_status": event_status, "obj": obj}
+            {
+                "user": user,
+                "sub": sub,
+                "event_status": event_status,
+                "obj": obj,
+                "product_name": product_name,
+                "is_auto_pay": is_auto_pay,
+            }
         )
         return attrs

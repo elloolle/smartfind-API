@@ -24,18 +24,23 @@ DATABASES = {
     }
 }
 
+
+DEFAULT_PRODUCT_NAME = "default_subscription"
+DAYS_BEFORE_SUBSCRIPTION_DEACTIVATION = 1
+TRIAL_PRODUCT_NAME = "trial_pro_month_subscription"
+TRIAL_PERIOD_DAYS = 14
 DEFAULT_PRODUCTS = [
     {
-        "name": "trial_pro_month_subscription",
+        "name": TRIAL_PRODUCT_NAME,
         "plan": "trial",
         "month_price": 0,
-        "delay": timedelta(days=14),
+        "delay": timedelta(days=TRIAL_PERIOD_DAYS),
     },
     {
         "name": "pro_month_subscription",
         "plan": "pro",
         "month_price": 100,
-        "delay": timedelta(days=30),
+        "delay": timedelta(days=DAYS_IN_MONTH),
     },
     {
         "name": "default_subscription",
@@ -44,9 +49,6 @@ DEFAULT_PRODUCTS = [
         "delay": None,
     },
 ]
-DEFAULT_PRODUCT_NAME = "default_subscription"
-DAYS_BEFORE_SUBSCRIPTION_DEACTIVATION = 1
-TRIAL_PRODUCT_NAME = "trial_pro_month_subscription"
 CHECKOUT_SUCCESS_URL = "http://127.0.0.1:8000"
 CHECKOUT_CANCEL_URL = "http://127.0.0.1:8000"
 PORTAL_SUCCESS_URL = "http://127.0.0.1:8000"

@@ -19,8 +19,4 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Subscription
-        fields = ["id", "user", "status", "start_period", "product"]
-
-    def create(self, validated_data):
-        user = validated_data["user"]
-        return create_default_subscription_to_user(user)
+        fields = ["id", "user", "status", "start_period", "product", "end_period"]

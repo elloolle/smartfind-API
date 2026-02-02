@@ -1,19 +1,17 @@
 ## Запуск проекта
 ```bash
-  docker compose --file deployment/docker-compose.yml up -d --build
+pip install -r requirements.txt
+docker compose -f docker-compose.local.yml up -d
+python manage.py migrate
+python manage.py runserver
 ```
-## Запуск проекта без билда
+## Запуск в продакшене (через Docker)
 ```bash
-  docker compose --file deployment/docker-compose.yml up -d
+docker compose -f docker-compose.prod.yml up -d --build
 ```
-## Удалить бд
+## Удалить бд при локальной разработке
 ```bash
-     docker rm -f  deployment-postgres-1 | docker volume rm deployment_db_data
-```
-### Команды для сервиса django
-## Перед запуском нужно зайти в консоль сервиса django
-```bash
-    docker compose --file deployment/docker-compose.yml exec django bash
+  docker compose -f docker-compose.local.yml down -v
 ```
 ## Запуск проверки линтера ruff
 ```bash
@@ -22,10 +20,6 @@
 ## Запуск тестов
 ```bash
     python manage.py test
-```
-## Инициализация бд дефолтными данными(запускается при старте контейнера)
-```bash
-    python manage.py create_default_db_objects
 ```
 ## Создание нового шаблонного приложения
 ```bash
