@@ -1,4 +1,4 @@
-from datetime import datetime, timezone as dt_timezone
+from datetime import datetime, timezone as dt_timezone, UTC
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -39,11 +39,11 @@ class PaymentViewSetTests(APITestCase):
         self.user.save(update_fields=["customer_id"])
         return customer
 
-    def _create_invoice(self, invoice_id, amount, period_start, status="paid"):
+    def _create_invoice(self, invoice_id, amount, period_start, invoice_status="paid"):
         stripe_data = {
             "id": invoice_id,
             "customer": self.customer.id,
-            "status": status,
+            "status": invoice_status,
             "period_start": period_start,
             "amount_due": amount,
         }
@@ -64,19 +64,22 @@ class PaymentViewSetTests(APITestCase):
 
     def test_list_with_invoices(self):
         first_period_start = int(
-            datetime(2025, 1, 1, tzinfo=dt_timezone.utc).timestamp()
+            datetime(2025, 1, 1, tzinfo=UTC).timestamp()
         )
         second_period_start = int(
-            datetime(2025, 2, 1, tzinfo=dt_timezone.utc).timestamp()
+            datetime(2025, 2, 1, tzinfo=UTC).timestamp()
         )
         first_invoice = self._create_invoice(
-            "inv_first", amount=5000, period_start=first_period_start, status="paid"
+            "inv_first",
+            amount=5000,
+            period_start=first_period_start,
+            invoice_status="paid",
         )
         second_invoice = self._create_invoice(
             "inv_second",
             amount=1234,
             period_start=second_period_start,
-            status="draft",
+            invoice_status="draft",
         )
 
         response = self.client.get(self.url)

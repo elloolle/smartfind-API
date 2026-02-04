@@ -1,5 +1,5 @@
 import django
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 
 
 def now():
@@ -7,4 +7,4 @@ def now():
 
 
 def get_datetime_from_unix_timestamp(unix_timestamp):
-    return datetime.fromtimestamp(unix_timestamp, tz=timezone.utc)
+    return datetime.fromtimestamp(unix_timestamp, tz=UTC)

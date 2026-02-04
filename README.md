@@ -13,9 +13,10 @@ docker compose -f docker-compose.prod.yml up -d --build
 ```bash
   docker compose -f docker-compose.local.yml down -v
 ```
-## Запуск проверки линтера ruff
+## Запуск проверки линтеров
 ```bash
     ruff check .
+    pylint . 
 ```
 ## Запуск тестов
 ```bash

@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -21,12 +22,15 @@ class TrialSubscriptionViewTests(APITestCase):
         self.url = "/api/yookassa/set_trial/"
 
     @patch("yookassa_payments.api.views.get_trial_subscription_payment_link")
+    @override_settings(DEBUG=False)
     def test_post_creates_trial_subscription_payment_link(
         self, mock_get_trial_subscription_payment_link
     ):
         mock_get_trial_subscription_payment_link.return_value = (
             "https://pay.test/yookassa-trial"
         )
+        self.user.may_have_trial = True
+        self.user.save(update_fields=["may_have_trial"])
 
         response = self.client.post(self.url, {}, format="json")
 

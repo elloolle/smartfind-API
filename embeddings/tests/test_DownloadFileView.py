@@ -1,5 +1,6 @@
 from pathlib import Path
-from tempfile import TemporaryDirectory
+import shutil
+from tempfile import mkdtemp
 
 from django.http import FileResponse
 from django.test import override_settings
@@ -10,9 +11,9 @@ from rest_framework.test import APITestCase
 
 class DownloadFileViewTests(APITestCase):
     def setUp(self):
-        self.temp_dir = TemporaryDirectory()
-        self.addCleanup(self.temp_dir.cleanup)
-        self.static_path = Path(self.temp_dir.name)
+        self.temp_dir = mkdtemp()
+        self.addCleanup(shutil.rmtree, self.temp_dir)
+        self.static_path = Path(self.temp_dir)
         self.settings_override = override_settings(STATIC_FILES_PATH=self.static_path)
         self.settings_override.enable()
         self.addCleanup(self.settings_override.disable)

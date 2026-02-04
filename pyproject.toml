@@ -3,9 +3,53 @@
 target-version = "py313"
 
 [tool.ruff.lint]
-select = ["E", "F"]
+select = ["E", "F", "W", "B", "SIM", "UP", "A"]
 ignore = ["F401"]
 
 [tool.ruff.lint.per-file-ignores]
 "**/migrations/*.py" = ["E501"]
 "**/settings/*.py" = ["E501", "F403", "F405"]
+
+[tool.pylint.main]
+load-plugins = ["pylint_django"]
+django-settings-module = "smartfindAPI.settings.dev"  # замени на реальный модуль
+ignore = [
+  "migrations",
+  "settings",
+  "venv",
+  ".venv",
+  "env",
+  ".env",
+  "__pycache__",
+  "node_modules",
+]
+disable = [
+  # --- Docs / стиль ---
+  "C0114", # missing-module-docstring
+  "C0115", # missing-class-docstring
+  "C0116", # missing-function-docstring
+  "C0103", # invalid-name (snake_case, CamelCase и т.п.)
+  "C0305", # trailing-newlines
+
+  # --- Классы / архитектура ---
+  "R0903", # too-few-public-methods
+  "R0901", # too-many-ancestors (DRF mixins)
+"R1705",
+  # --- Импорты (пусть Ruff / isort решает) ---
+  "C0411", # wrong-import-order
+  "C0412", # ungrouped-imports
+
+  # --- Django / DRF динамика ---
+  "C0415", # import-outside-toplevel (apps.py, manage.py)
+  "W0201", # attribute-defined-outside-init (View / Serializer)
+  "W0223", # abstract-method (DRF serializers without create/update)
+
+  # --- Шум ---
+  "W0611", # unused-import (часто side-effect imports: signals)
+    "W0613",
+  "W0511",
+  "R0801", # duplicate-code (settings, migrations)
+]
+
+
+jobs = 0

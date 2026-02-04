@@ -5,7 +5,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.generics import GenericAPIView
 from rest_framework import viewsets, mixins
+from rest_framework.exceptions import MethodNotAllowed
 import stripe
+from stripe._error import StripeError
 from loguru import logger
 from django.contrib.auth import get_user_model
 from django.conf import settings
@@ -100,8 +102,7 @@ class SubscriptionView(EnsureStripeCustomerMixin, GenericAPIView):
             return SubscriptionProductNameSerializer
         elif self.request.method == "DELETE":
             return CheckSubscriptionExistsSerializer
-        else:
-            raise f"serializer_class don't exists for {self.request.method}"
+        raise MethodNotAllowed(self.request.method)
 
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
@@ -183,7 +184,7 @@ class PaymentSession(APIView):
         payment_session_id = kwargs["payment_session_id"]
         try:
             payment_session = stripe.checkout.Session.retrieve(id=payment_session_id)
-        except Exception as e:
+        except StripeError as e:
             return Response(
                 {"error": "payment session don't exist", "stripe_error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST,

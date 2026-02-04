@@ -50,14 +50,14 @@ class UserViewTests(APITestCase):
         subscription_id,
         *,
         product_lookup_key="pro_month_subscription",
-        status="active",
+        subscription_status="active",
     ):
         start_date = datetime(year=2000, month=1, day=1)
         end_date = start_date + timedelta(days=30)
         stripe_data = {
             "id": subscription_id,
             "customer": self.customer.id,
-            "status": status,
+            "status": subscription_status,
             "plan": product_lookup_key,
             "start_date": int(start_date.timestamp()),
             "ended_at": int(end_date.timestamp()),
@@ -120,7 +120,7 @@ class UserViewTests(APITestCase):
     def test_updating_active_subscription_to_unpaid_updates_user_subscription(self):
         subscription_id = "sub_update_unpaid"
         djstripe_subscription = self._create_subscription(
-            subscription_id, status="active"
+            subscription_id, subscription_status="active"
         )
         self.user.refresh_from_db()
         self.assertEqual(self.user.subscription.id, subscription_id)

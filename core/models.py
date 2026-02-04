@@ -1,11 +1,12 @@
 import uuid
+from datetime import timedelta
 
 from django.conf import settings
-from django.db import models
 from django.contrib.auth import get_user_model
+from django.db import models
 from django.forms.models import model_to_dict
+
 from .helpers import now
-from datetime import timedelta
 
 User = get_user_model()
 
@@ -17,9 +18,9 @@ class Product(models.Model):
     month_price = models.FloatField()
 
     def to_dict(self):
-        dict = model_to_dict(self)
-        dict["delay"] = str(dict["delay"])
-        return dict
+        model_dict = model_to_dict(self)
+        model_dict["delay"] = str(model_dict["delay"])
+        return model_dict
 
 
 class SubscriptionStatus(models.TextChoices):
@@ -72,6 +73,7 @@ class AbstractPayment(models.Model):
 class PaymentMethodStatus(models.TextChoices):
     ACTIVE = "active", "Active"
     CANCELED = "canceled", "Canceled"
+    PENDING = "pending", "Pending"
 
 
 class AbstractPaymentMethod(models.Model):

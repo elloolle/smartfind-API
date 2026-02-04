@@ -1,7 +1,6 @@
-from copy import deepcopy
-from datetime import timedelta
-from decimal import Decimal
 import json
+from copy import deepcopy
+from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -9,8 +8,6 @@ from django.utils import timezone
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
 from rest_framework import status
 from rest_framework.test import APITestCase
-
-from unittest.mock import patch
 
 from core.models import (
     PaymentMethodStatus,
@@ -144,11 +141,20 @@ class WebHookViewTests(APITestCase):
         subscription = Subscription.objects.get(user=self.user)
         self.assertEqual(subscription.status, SubscriptionStatus.ACTIVE)
         self.assertEqual(subscription.product.name, settings.TRIAL_PRODUCT_NAME)
-        self._assert_pay_once_task(
+        self._assert_auto_pay_task(
             payment_method_id=payload["object"]["payment_method"]["id"],
             amount=subscription.product.month_price,
             user_id=self.user.id,
             product_name=subscription.product.name,
+        )
+        interval = IntervalSchedule.objects.get(
+            every=settings.DAYS_IN_MONTH, period=IntervalSchedule.DAYS
+        )
+        self.assertEqual(
+            PeriodicTask.objects.get(
+                name=f"{AUTO_PAY_JOB_NAME}_{payload['object']['payment_method']['id']}"
+            ).interval_id,
+            interval.id,
         )
 
     def test_webhook_payment_canceled_marks_subscription_unpaid_and_removes_task(self):

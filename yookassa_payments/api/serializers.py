@@ -1,10 +1,9 @@
-from django.conf import settings
-from loguru import logger
-from rest_framework import serializers
-from ..models import Payment, PaymentMethod
-from yookassa.domain.notification import WebhookNotification
-from core.models import Subscription, PaymentMethodStatus
 from django.contrib.auth import get_user_model
+from rest_framework import serializers
+from yookassa.domain.notification import WebhookNotification
+
+from core.models import Subscription
+from ..models import Payment, PaymentMethod
 
 User = get_user_model()
 
@@ -24,14 +23,14 @@ class PaymentMethodSerializer(serializers.ModelSerializer):
 class EventTypeSerializer(serializers.Serializer):
     event = serializers.JSONField()
 
-    def validate(self, data):
-        event = data["event"]
+    def validate(self, attrs):
+        event = attrs["event"]
         try:
             WebhookNotification(event)
-        except Exception as e:
-            raise serializers.ValidationError(e)
-        data.update({"event_type": event["event"]})
-        return data
+        except Exception:
+            raise serializers.ValidationError(event) from None
+        attrs.update({"event_type": event["event"]})
+        return attrs
 
 
 class PaymentEventSerializer(serializers.Serializer):
@@ -39,7 +38,6 @@ class PaymentEventSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         event = attrs["event"]
-        event_type = event.get("event")
 
         obj = event["object"]
         metadata = obj["metadata"]
@@ -55,13 +53,11 @@ class PaymentEventSerializer(serializers.Serializer):
             raise serializers.ValidationError(f"User not found: {user_id}")
 
         sub = Subscription.objects.filter(user=user).first()
-        event_status = event_type.removeprefix("payment.")
 
         attrs.update(
             {
                 "user": user,
                 "sub": sub,
-                "event_status": event_status,
                 "obj": obj,
                 "product_name": product_name,
                 "is_auto_pay": is_auto_pay,

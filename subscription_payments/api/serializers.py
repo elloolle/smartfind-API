@@ -13,7 +13,7 @@ User = get_user_model()
 class SubscriptionProductNameSerializer(serializers.Serializer):
     product_name = serializers.CharField()
 
-    def validate(self, data):
+    def validate(self, attrs):
         request = self.context.get("request")
         user = request.user
         subscription = getattr(user, "subscription", None)
@@ -24,14 +24,14 @@ class SubscriptionProductNameSerializer(serializers.Serializer):
             and product_name == subscription.product.name
         ):
             raise serializers.ValidationError("User already subscribed for this plan")
-        data["product_name"] = product_name
-        return data
+        attrs["product_name"] = product_name
+        return attrs
 
 
 class CheckSubscriptionExistsSerializer(serializers.Serializer):
     subscription_id = serializers.CharField(read_only=True)
 
-    def validate(self, data):
+    def validate(self, attrs):
         request = self.context.get("request")
         subscription = get_last_user_subscription(request.user)
         if not subscription:
@@ -39,8 +39,8 @@ class CheckSubscriptionExistsSerializer(serializers.Serializer):
                 detail="user can't delete default subscription"
             )
         self.subscription_id = subscription.id
-        data["subscription_id"] = subscription.id
-        return data
+        attrs["subscription_id"] = subscription.id
+        return attrs
 
 
 class PaymentMethodSerializer(serializers.ModelSerializer):

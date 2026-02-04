@@ -28,7 +28,6 @@ def get_last_user_subscription(user):
 
 
 def get_core_sub_dict_from_djstripe_sub(djstripe_sub):
-    id = djstripe_sub.id
     product_name = djstripe_sub.stripe_data["items"]["data"][0]["price"]["lookup_key"]
     user = User.objects.get(customer_id=djstripe_sub.customer.id)
     djstripe_sub_status = djstripe_sub.status
@@ -50,7 +49,7 @@ def get_core_sub_dict_from_djstripe_sub(djstripe_sub):
         end_period = get_datetime_from_unix_timestamp(djstripe_sub.ended_at)
     product = Product.objects.get(name=product_name)
     return {
-        "id": id,
+        "id": djstripe_sub.id,
         "user": user,
         "status": status,
         "start_period": start_period,

@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
+from stripe._error import StripeError
 
 User = get_user_model()
 
@@ -23,7 +24,7 @@ class PaymentSessionTests(APITestCase):
 
     @patch("stripe.checkout.Session.retrieve")
     def test_get_payment_session_not_found(self, mock_session_retrieve):
-        mock_session_retrieve.side_effect = Exception("not found")
+        mock_session_retrieve.side_effect = StripeError("not found")
 
         response = self.client.get(self.url)
 
