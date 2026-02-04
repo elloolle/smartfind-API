@@ -40,6 +40,7 @@ YOOKASSA_TO_CORE_PAYMENT_STATUS = {
 }
 
 YOOKASSA_TO_CORE_PAYMENT_METHOD_STATUS = {
+    "active": PaymentMethodStatus.ACTIVE,
     "succeeded": PaymentMethodStatus.ACTIVE,
     "canceled": PaymentMethodStatus.CANCELED,
 }
@@ -74,15 +75,28 @@ class WebHookView(APIView):
 
     def log_payment_into_db(self, payment_json):
         status = YOOKASSA_TO_CORE_PAYMENT_STATUS[self.event_status]
+        income_amount = 0
+        if self.event_type == "succeeded":
+            income_amount = payment_json["income_amount"]["value"]
         Payment.objects.update_or_create(
             id=payment_json["id"],
             defaults={
                 "user": self.user,
                 "status": status,
                 "amount": payment_json["amount"]["value"],
-                "income_amount": payment_json["income_amount"]["value"],
+                "income_amount": income_amount,
             },
         )
+
+    def process_payment_method(self, payment_method_json):
+        if self.event_type == "canceled":
+            return
+        payment_method = log_payment_method_into_db(
+            payment_method_json,
+            self.user,
+            YOOKASSA_TO_CORE_PAYMENT_METHOD_STATUS[self.event_status],
+        )
+        self.payment_method = payment_method
 
     def process_payment_event(self, event):
         serializer = PaymentEventSerializer(data={"event": event})
@@ -95,12 +109,8 @@ class WebHookView(APIView):
         payment_json = validated_data["obj"]
 
         self.log_payment_into_db(payment_json)
-        payment_method = log_payment_method_into_db(
-            payment_json["payment_method"],
-            self.user,
-            YOOKASSA_TO_CORE_PAYMENT_METHOD_STATUS[self.event_status],
-        )
-        self.payment_method = payment_method
+        self.process_payment_method(payment_json["payment_method"])
+
         if self.event_type in ("payment.succeeded", "payment.waiting_for_capture"):
             self.process_success_payment()
         if self.event_type == "payment.canceled":
@@ -110,13 +120,18 @@ class WebHookView(APIView):
         payment_method = PaymentMethod.objects.get(id=event["object"]["id"])
         status = YOOKASSA_TO_CORE_PAYMENT_METHOD_STATUS[self.event_status]
         payment_method.status = status
+        user = payment_method.user
         product = Product.objects.get(name=settings.TRIAL_PRODUCT_NAME)
+        Subscription.objects.filter(user=user).delete()
         Subscription.objects.create(
-            user=payment_method.user,
+            user=user,
             status=SubscriptionStatus.ACTIVE,
             product=product,
         )
-        make_once_pay(payment_method, product)
+        product_after_trial = Product.objects.get(
+            name=settings.PRODUCT_NAME_AFTER_TRIAL_PERIOD
+        )
+        make_once_pay(payment_method, product_after_trial, pay_delay=product.delay)
 
     def post(self, request, *args, **kwargs):
         event = request.data
@@ -127,7 +142,7 @@ class WebHookView(APIView):
         self.event_status = self.event_type.split(".", 1)[1]
         if self.event_type.startswith("payment."):
             self.process_payment_event(event)
-        if self.event_type == "payment_method.succeeded":
+        if self.event_type == "payment_method.active":
             # этот вебхук отправляется только в случае привязки платежных
             # средств для trial подписки
             self.process_payment_method_saved(event)

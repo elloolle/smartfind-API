@@ -24,7 +24,7 @@ def create_default_super_user_if_debug():
     if not settings.DEBUG:
         return
     super_user = User.objects.filter(username=settings.DEBUG_ADMIN_NAME).first()
-    if not super_user:
+    if super_user:
         return
     User.objects.create_superuser(
         username=settings.DEBUG_ADMIN_NAME,

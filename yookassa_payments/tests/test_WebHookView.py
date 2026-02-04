@@ -1,5 +1,4 @@
 import json
-from copy import deepcopy
 from decimal import Decimal
 
 from django.conf import settings
@@ -17,6 +16,14 @@ from core.models import (
     SubscriptionStatus,
 )
 from yookassa_payments.models import Payment, PaymentMethod
+from .webhooks import (
+    copy_payload,
+    payment_canceled_bank_card,
+    payment_method_active_bank_card,
+    payment_succeeded,
+    payment_succeeded_bank_card,
+    trial_payment_succeeded,
+)
 from ..service import AUTO_PAY_JOB_NAME, PAY_ONCE_JOB_NAME
 
 User = get_user_model()
@@ -31,36 +38,7 @@ class WebHookViewTests(APITestCase):
         )
         self._ensure_products()
         self.url = "/api/yookassa/webhook/"
-        self.base_payload = {
-            "type": "notification",
-            "event": "payment.succeeded",
-            "object": {
-                "id": "30f5d918-000f-5001-9000-14efbe8f8527",
-                "status": "succeeded",
-                "amount": {"value": "100.00", "currency": "RUB"},
-                "income_amount": {"value": "95.73", "currency": "RUB"},
-                "recipient": {"account_id": "1239880", "gateway_id": "2617846"},
-                "payment_method": {
-                    "type": "yoo_money",
-                    "id": "30f5d918-000f-5001-9000-14efbe8f8527",
-                    "saved": True,
-                    "status": "active",
-                    "title": "YooMoney wallet 410011758831136",
-                    "account_number": "410011758831136",
-                },
-                "captured_at": "2026-01-11T15:44:35.557Z",
-                "created_at": "2026-01-11T15:44:24.482Z",
-                "test": True,
-                "refunded_amount": {"value": "0.00", "currency": "RUB"},
-                "paid": True,
-                "refundable": True,
-                "metadata": {
-                    "user_id": str(self.user.id),
-                    "cms_name": "yookassa_sdk_python",
-                    "product": "pro_month_subscription",
-                },
-            },
-        }
+        self.base_payload = payment_succeeded(self.user.id)
 
     def _ensure_products(self):
         for product in settings.DEFAULT_PRODUCTS:
@@ -106,7 +84,7 @@ class WebHookViewTests(APITestCase):
         )
 
     def test_webhook_payment_succeeded_creates_subscription_and_task(self):
-        payload = deepcopy(self.base_payload)
+        payload = copy_payload(self.base_payload)
 
         response = self.client.post(self.url, payload, format="json")
 
@@ -131,9 +109,7 @@ class WebHookViewTests(APITestCase):
         )
 
     def test_webhook_trial_payment_succeeded_creates_subscription_and_task(self):
-        payload = deepcopy(self.base_payload)
-        payload["object"]["metadata"]["trial"] = True
-        payload["object"]["metadata"]["product"] = settings.TRIAL_PRODUCT_NAME
+        payload = trial_payment_succeeded(self.user.id)
 
         response = self.client.post(self.url, payload, format="json")
 
@@ -180,7 +156,7 @@ class WebHookViewTests(APITestCase):
                 sort_keys=True,
             ),
         )
-        payload = deepcopy(self.base_payload)
+        payload = copy_payload(self.base_payload)
         payload["event"] = "payment.canceled"
 
         response = self.client.post(self.url, payload, format="json")
@@ -195,7 +171,7 @@ class WebHookViewTests(APITestCase):
         )
 
     def test_webhook_logs_payment_and_method_for_yoo_money(self):
-        payload = deepcopy(self.base_payload)
+        payload = copy_payload(self.base_payload)
 
         response = self.client.post(self.url, payload, format="json")
 
@@ -220,22 +196,12 @@ class WebHookViewTests(APITestCase):
         )
 
     def test_webhook_logs_bank_card_payment_method_details(self):
-        payload = deepcopy(self.base_payload)
-        payload["object"]["payment_method"] = {
-            "type": "bank_card",
-            "id": "card_method",
-            "card": {
-                "first6": "411111",
-                "last4": "1111",
-                "expiry_year": "2028",
-                "expiry_month": "09",
-            },
-        }
+        payload = payment_succeeded_bank_card(self.user.id)
 
         response = self.client.post(self.url, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        method = PaymentMethod.objects.get(id="card_method")
+        method = PaymentMethod.objects.get(id=payload["object"]["payment_method"]["id"])
         self.assertEqual(
             method.details,
             {
@@ -246,7 +212,7 @@ class WebHookViewTests(APITestCase):
         )
 
     def test_webhook_updates_existing_payment_and_method(self):
-        payload = deepcopy(self.base_payload)
+        payload = copy_payload(self.base_payload)
         Payment.objects.create(
             id=payload["object"]["id"],
             user=self.user,
@@ -280,3 +246,63 @@ class WebHookViewTests(APITestCase):
             updated_method.details,
             {"type": "yoo_money", "number": "410011000000000"},
         )
+
+    def test_webhook_payment_canceled_first_payment_keeps_subscription_and_skips_method(
+        self,
+    ):
+        payload = payment_canceled_bank_card(self.user.id)
+        existing_subscription = Subscription.objects.get(user=self.user)
+
+        response = self.client.post(self.url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(
+            Subscription.objects.filter(id=existing_subscription.id).exists()
+        )
+        self.assertEqual(
+            Subscription.objects.get(id=existing_subscription.id).status,
+            existing_subscription.status,
+        )
+        self.assertFalse(
+            PaymentMethod.objects.filter(
+                id=payload["object"]["payment_method"]["id"]
+            ).exists()
+        )
+
+    def test_webhook_payment_method_active_trial_creates_once_task_and_disables_trial(
+        self,
+    ):
+        payment_method_id = "3115828b-0037-5000-8000-0c64f3fdb5c0"
+        PaymentMethod.objects.create(
+            id=payment_method_id,
+            user=self.user,
+            status=PaymentMethodStatus.PENDING,
+            details={},
+        )
+        self.user.may_have_trial = True
+        self.user.save(update_fields=["may_have_trial"])
+        self.user.subscription.delete()
+        payload = payment_method_active_bank_card(payment_method_id)
+
+        response = self.client.post(self.url, payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        subscription = Subscription.objects.get(user=self.user)
+        self.assertEqual(subscription.product.name, settings.TRIAL_PRODUCT_NAME)
+        task = PeriodicTask.objects.get(name=f"{PAY_ONCE_JOB_NAME}_{payment_method_id}")
+        self.assertTrue(task.one_off)
+        self.assertEqual(task.task, "yookassa_payments.tasks.withdraw_money")
+        kwargs = json.loads(task.kwargs)
+        self.assertEqual(kwargs["payment_method_id"], payment_method_id)
+        self.assertEqual(kwargs["amount"], subscription.product.month_price)
+        self.assertEqual(
+            kwargs["metadata"],
+            {
+                "user_id": self.user.id,
+                "product": subscription.product.name,
+                "auto_pay": False,
+                "trial": False,
+            },
+        )
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.may_have_trial)

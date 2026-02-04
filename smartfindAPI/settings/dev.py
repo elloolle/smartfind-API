@@ -28,6 +28,7 @@ DATABASES = {
 DEFAULT_PRODUCT_NAME = "default_subscription"
 DAYS_BEFORE_SUBSCRIPTION_DEACTIVATION = 1
 TRIAL_PRODUCT_NAME = "trial_pro_month_subscription"
+PRODUCT_NAME_AFTER_TRIAL_PERIOD = "pro_month_subscription"
 TRIAL_PERIOD_DAYS = 14
 DEFAULT_PRODUCTS = [
     {
@@ -37,7 +38,7 @@ DEFAULT_PRODUCTS = [
         "delay": timedelta(days=TRIAL_PERIOD_DAYS),
     },
     {
-        "name": "pro_month_subscription",
+        "name": PRODUCT_NAME_AFTER_TRIAL_PERIOD,
         "plan": "pro",
         "month_price": 100,
         "delay": timedelta(days=DAYS_IN_MONTH),

@@ -53,6 +53,19 @@ def make_payment(amount, metadata):
     return payment
 
 
+def withdraw_money(payment_method_id, amount, metadata):
+    payment = YookassaPayment.create(
+        {
+            "amount": {"value": amount, "currency": "RUB"},
+            "capture": True,
+            "payment_method_id": payment_method_id,
+            "description": "Р—Р°РєР°Р·",
+            "metadata": metadata,
+        }
+    )
+    return payment.json()
+
+
 def make_payment_method(metadata):
     payment_method = YookassaPaymentMethod.create(
         {
@@ -158,9 +171,9 @@ def make_auto_pay(payment_method, product):
     )
 
 
-def make_once_pay(payment_method, product):
+def make_once_pay(payment_method, product, pay_delay):
     task_kwargs, task_name = make_task_kwargs_and_name(payment_method, product, False)
-    clocked = ClockedSchedule.objects.create(clocked_time=now() + product.delay)
+    clocked = ClockedSchedule.objects.create(clocked_time=now() + pay_delay)
     PeriodicTask.objects.update_or_create(
         name=task_name,
         defaults={
@@ -181,9 +194,11 @@ def decline_auto_pay(payment_method_id):
 
 def delete_subscription_and_autopay(subscription):
     user = subscription.user
-    payment_method_id = PaymentMethod.objects.filter(
-        user=user, status=PaymentMethodStatus.ACTIVE
-    ).id
+    payment_method_id = (
+        PaymentMethod.objects.filter(user=user, status=PaymentMethodStatus.ACTIVE)
+        .first()
+        .id
+    )
     decline_auto_pay(payment_method_id)
     subscription.delete()
     create_default_subscription_to_user(user)
