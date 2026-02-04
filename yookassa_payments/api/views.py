@@ -60,6 +60,7 @@ class WebHookView(APIView):
     def process_auto_pay_payment(self):
         product_delay = self.sub.product.delay
         self.sub.end_period += product_delay
+        self.sub.save()
 
     def process_success_payment(self):
         if self.is_auto_pay:
@@ -67,16 +68,19 @@ class WebHookView(APIView):
         else:
             self.process_first_payment()
 
-    def process_canceled_payment(self):
+    def process_canceled_payment(self, payment_method_id):
         if not self.is_auto_pay:
             # значит это неуспешная попытка первого платежа
             return
-        delete_subscription_and_autopay(self.sub)
+        delete_subscription_and_autopay(
+            self.sub,
+            payment_method_id=payment_method_id,
+        )
 
     def log_payment_into_db(self, payment_json):
         status = YOOKASSA_TO_CORE_PAYMENT_STATUS[self.event_status]
         income_amount = 0
-        if self.event_type == "succeeded":
+        if self.event_status == "succeeded":
             income_amount = payment_json["income_amount"]["value"]
         Payment.objects.update_or_create(
             id=payment_json["id"],
@@ -89,8 +93,6 @@ class WebHookView(APIView):
         )
 
     def process_payment_method(self, payment_method_json):
-        if self.event_type == "canceled":
-            return
         payment_method = log_payment_method_into_db(
             payment_method_json,
             self.user,
@@ -114,14 +116,16 @@ class WebHookView(APIView):
         if self.event_type in ("payment.succeeded", "payment.waiting_for_capture"):
             self.process_success_payment()
         if self.event_type == "payment.canceled":
-            self.process_canceled_payment()
+            self.process_canceled_payment(payment_json["payment_method"]["id"])
 
     def process_payment_method_saved(self, event):
         payment_method = PaymentMethod.objects.get(id=event["object"]["id"])
         status = YOOKASSA_TO_CORE_PAYMENT_METHOD_STATUS[self.event_status]
         payment_method.status = status
-        user = payment_method.user
+        payment_method.save()
         product = Product.objects.get(name=settings.TRIAL_PRODUCT_NAME)
+        user = payment_method.user
+
         Subscription.objects.filter(user=user).delete()
         Subscription.objects.create(
             user=user,
@@ -132,6 +136,8 @@ class WebHookView(APIView):
             name=settings.PRODUCT_NAME_AFTER_TRIAL_PERIOD
         )
         make_once_pay(payment_method, product_after_trial, pay_delay=product.delay)
+        user.may_have_trial = False
+        user.save()
 
     def post(self, request, *args, **kwargs):
         event = request.data
@@ -200,6 +206,7 @@ class PaymentMethodViewSet(
     def perform_destroy(self, instance):
         delete_subscription_and_autopay_by_user(self.request.user)
         instance.status = PaymentMethodStatus.CANCELED
+        instance.save()
 
     def get_queryset(self):
         return PaymentMethod.objects.filter(user=self.request.user)

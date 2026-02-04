@@ -94,6 +94,41 @@ def payment_canceled_bank_card(user_id, auto_pay=False, trial=False):
     }
 
 
+def payment_canceled_yoo_money(user_id, auto_pay=False, trial=False):
+    return {
+        "type": "notification",
+        "event": "payment.canceled",
+        "object": {
+            "id": "log-canceled-payment-id",
+            "status": "canceled",
+            "amount": {"value": "100.00", "currency": "RUB"},
+            "income_amount": {"value": "95.73", "currency": "RUB"},
+            "recipient": {"account_id": "1239880", "gateway_id": "2617846"},
+            "payment_method": {
+                "type": "yoo_money",
+                "id": "log-canceled-method-id",
+                "saved": True,
+                "status": "active",
+                "title": "YooMoney wallet 410011758831136",
+                "account_number": "410011758831136",
+            },
+            "captured_at": "2026-01-11T15:44:35.557Z",
+            "created_at": "2026-01-11T15:44:24.482Z",
+            "test": True,
+            "refunded_amount": {"value": "0.00", "currency": "RUB"},
+            "paid": False,
+            "refundable": False,
+            "metadata": {
+                "user_id": str(user_id),
+                "cms_name": "yookassa_sdk_python",
+                "product": "pro_month_subscription",
+                "auto_pay": auto_pay,
+                "trial": trial,
+            },
+        },
+    }
+
+
 def payment_method_active_bank_card(payment_method_id):
     return {
         "type": "notification",

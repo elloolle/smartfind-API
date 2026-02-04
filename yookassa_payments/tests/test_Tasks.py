@@ -66,8 +66,10 @@ class YookassaTasksTests(APITestCase):
         update_subscriptions_statuses_based_on_end_period()
 
         for subscription in (expired_trial, expired_pro, expired_default):
-            subscription.refresh_from_db()
-            self.assertEqual(subscription.status, SubscriptionStatus.UNPAID)
+            updated = Subscription.objects.get(user=subscription.user)
+            self.assertEqual(updated.status, SubscriptionStatus.ACTIVE)
+            self.assertEqual(updated.product.name, settings.DEFAULT_PRODUCT_NAME)
         for subscription in (active_trial, active_pro, active_default):
-            subscription.refresh_from_db()
-            self.assertEqual(subscription.status, SubscriptionStatus.ACTIVE)
+            updated = Subscription.objects.get(user=subscription.user)
+            self.assertEqual(updated.status, SubscriptionStatus.ACTIVE)
+            self.assertEqual(updated.product.name, subscription.product.name)

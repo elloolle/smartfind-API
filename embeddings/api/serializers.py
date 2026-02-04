@@ -52,7 +52,12 @@ class FileNameSerializer(serializers.Serializer):
     file_name = serializers.CharField()
 
     def validate_file_name(self, value):
-        file_path = settings.STATIC_FILES_PATH / Path(value)
+        base_path = settings.STATIC_FILES_PATH.resolve()
+        file_path = (base_path / Path(value)).resolve()
+        if base_path not in file_path.parents and file_path != base_path:
+            raise serializers.ValidationError(
+                detail="file path is outside static files"
+            )
         if not file_path.is_file():
             raise serializers.ValidationError(
                 detail=f"{file_path} isn't a correct file name"

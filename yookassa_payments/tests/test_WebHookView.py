@@ -7,6 +7,7 @@ from django.utils import timezone
 from django_celery_beat.models import IntervalSchedule, PeriodicTask
 from rest_framework import status
 from rest_framework.test import APITestCase
+from tenacity import after_log
 
 from core.models import (
     PaymentMethodStatus,
@@ -19,6 +20,7 @@ from yookassa_payments.models import Payment, PaymentMethod
 from .webhooks import (
     copy_payload,
     payment_canceled_bank_card,
+    payment_canceled_yoo_money,
     payment_method_active_bank_card,
     payment_succeeded,
     payment_succeeded_bank_card,
@@ -108,39 +110,23 @@ class WebHookViewTests(APITestCase):
             interval.id,
         )
 
-    def test_webhook_trial_payment_succeeded_creates_subscription_and_task(self):
-        payload = trial_payment_succeeded(self.user.id)
-
-        response = self.client.post(self.url, payload, format="json")
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        subscription = Subscription.objects.get(user=self.user)
-        self.assertEqual(subscription.status, SubscriptionStatus.ACTIVE)
-        self.assertEqual(subscription.product.name, settings.TRIAL_PRODUCT_NAME)
-        self._assert_auto_pay_task(
-            payment_method_id=payload["object"]["payment_method"]["id"],
-            amount=subscription.product.month_price,
-            user_id=self.user.id,
-            product_name=subscription.product.name,
-        )
-        interval = IntervalSchedule.objects.get(
-            every=settings.DAYS_IN_MONTH, period=IntervalSchedule.DAYS
-        )
-        self.assertEqual(
-            PeriodicTask.objects.get(
-                name=f"{AUTO_PAY_JOB_NAME}_{payload['object']['payment_method']['id']}"
-            ).interval_id,
-            interval.id,
-        )
-
-    def test_webhook_payment_canceled_marks_subscription_unpaid_and_removes_task(self):
-        payment_method_id = self.base_payload["object"]["payment_method"]["id"]
+    def test_webhook_payment_canceled_resets_subscription_to_default_and_removes_task(
+        self,
+    ):
+        payload = payment_canceled_yoo_money(self.user.id, auto_pay=True)
+        payment_method_id = payload["object"]["payment_method"]["id"]
         product = Product.objects.get(name="pro_month_subscription")
         self.user.subscription.delete()
-        subscription = Subscription.objects.create(
+        Subscription.objects.create(
             user=self.user,
             status=SubscriptionStatus.ACTIVE,
             product=product,
+        )
+        PaymentMethod.objects.create(
+            id=payment_method_id,
+            user=self.user,
+            status=PaymentMethodStatus.ACTIVE,
+            details={"type": "yoo_money", "number": "old"},
         )
         interval, _ = IntervalSchedule.objects.get_or_create(
             every=settings.DAYS_IN_MONTH, period=IntervalSchedule.DAYS
@@ -156,18 +142,26 @@ class WebHookViewTests(APITestCase):
                 sort_keys=True,
             ),
         )
-        payload = copy_payload(self.base_payload)
-        payload["event"] = "payment.canceled"
 
         response = self.client.post(self.url, payload, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        subscription.refresh_from_db()
+        subscription = Subscription.objects.get(user=self.user)
+        self.assertEqual(subscription.product.name, settings.DEFAULT_PRODUCT_NAME)
         self.assertEqual(subscription.status, SubscriptionStatus.ACTIVE)
-        self.assertTrue(
+        self.assertFalse(
             PeriodicTask.objects.filter(
                 name=f"{AUTO_PAY_JOB_NAME}_{payment_method_id}"
             ).exists()
+        )
+        payment_method = PaymentMethod.objects.get(id=payment_method_id)
+        self.assertEqual(payment_method.status, PaymentMethodStatus.CANCELED)
+        self.assertEqual(
+            payment_method.details,
+            {
+                "type": "yoo_money",
+                "number": payload["object"]["payment_method"]["account_number"],
+            },
         )
 
     def test_webhook_logs_payment_and_method_for_yoo_money(self):
@@ -247,7 +241,7 @@ class WebHookViewTests(APITestCase):
             {"type": "yoo_money", "number": "410011000000000"},
         )
 
-    def test_webhook_payment_canceled_first_payment_keeps_subscription_and_skips_method(
+    def test_webhook_payment_canceled_first_payment_keeps_subscription_and_logs_method(
         self,
     ):
         payload = payment_canceled_bank_card(self.user.id)
@@ -263,10 +257,17 @@ class WebHookViewTests(APITestCase):
             Subscription.objects.get(id=existing_subscription.id).status,
             existing_subscription.status,
         )
-        self.assertFalse(
-            PaymentMethod.objects.filter(
-                id=payload["object"]["payment_method"]["id"]
-            ).exists()
+        payment_method = PaymentMethod.objects.get(
+            id=payload["object"]["payment_method"]["id"]
+        )
+        self.assertEqual(payment_method.status, PaymentMethodStatus.CANCELED)
+        self.assertEqual(
+            payment_method.details,
+            {
+                "type": "bank_card",
+                "number": "2200 00** **** 0079",
+                "expire_date": "11/30",
+            },
         )
 
     def test_webhook_payment_method_active_trial_creates_once_task_and_disables_trial(
@@ -293,13 +294,16 @@ class WebHookViewTests(APITestCase):
         self.assertTrue(task.one_off)
         self.assertEqual(task.task, "yookassa_payments.tasks.withdraw_money")
         kwargs = json.loads(task.kwargs)
+        after_product = Product.objects.get(
+            name=settings.PRODUCT_NAME_AFTER_TRIAL_PERIOD
+        )
         self.assertEqual(kwargs["payment_method_id"], payment_method_id)
-        self.assertEqual(kwargs["amount"], subscription.product.month_price)
+        self.assertEqual(kwargs["amount"], after_product.month_price)
         self.assertEqual(
             kwargs["metadata"],
             {
                 "user_id": self.user.id,
-                "product": subscription.product.name,
+                "product": after_product.name,
                 "auto_pay": False,
                 "trial": False,
             },

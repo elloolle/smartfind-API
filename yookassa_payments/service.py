@@ -192,14 +192,24 @@ def decline_auto_pay(payment_method_id):
     ).delete()
 
 
-def delete_subscription_and_autopay(subscription):
+def get_payment_method_id(user):
+    payment_method = PaymentMethod.objects.filter(
+        user=user, status=PaymentMethodStatus.ACTIVE
+    ).first()
+    if payment_method:
+        return payment_method.id
+    payment_method = PaymentMethod.objects.filter(user=user).first()
+    if payment_method:
+        return payment_method.id
+    return None
+
+
+def delete_subscription_and_autopay(subscription, payment_method_id=None):
     user = subscription.user
-    payment_method_id = (
-        PaymentMethod.objects.filter(user=user, status=PaymentMethodStatus.ACTIVE)
-        .first()
-        .id
-    )
-    decline_auto_pay(payment_method_id)
+    if not payment_method_id:
+        payment_method_id = get_payment_method_id(user)
+    if payment_method_id:
+        decline_auto_pay(payment_method_id)
     subscription.delete()
     create_default_subscription_to_user(user)
 

@@ -126,14 +126,13 @@ class TrialSubscriptionView(SubscriptionView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        # TODO валидация
         if not request.user.may_have_trial:
             return Response(
                 {"error": "user does not have trial permissions"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         user = request.user
-        user.may_have_trial = True
+        user.may_have_trial = False
         user.save()
         return self.create_payment_session(
             product_name=settings.TRIAL_PRODUCT_NAME,

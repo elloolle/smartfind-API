@@ -42,3 +42,14 @@ class DownloadFileViewTests(APITestCase):
         response = self.client.get(self.url, {"file_name": file_name})
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_returns_400_when_path_traversal_attempted(self):
+        outside_path = self.static_path.parent / "outside.txt"
+        outside_path.write_bytes(b"secret")
+        self.addCleanup(outside_path.unlink)
+
+        response = self.client.get(
+            self.url, {"file_name": f"../{outside_path.name}"}
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
